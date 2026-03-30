@@ -183,6 +183,30 @@ class _PerfilUsuarioScreenState extends State<PerfilUsuarioScreen> {
                                       ),
                                     ],
                                   ),
+                                  const SizedBox(height: 8),
+                                  // Teléfono
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      const Icon(
+                                        Icons.phone_outlined,
+                                        size: 16,
+                                        color: Colors.white70,
+                                      ),
+                                      const SizedBox(width: 6),
+                                      Flexible(
+                                        child: Text(
+                                          (_perfil!.telefono ?? '').trim(),
+                                          style: TextStyle(
+                                            fontSize: 14,
+                                            color: Colors.white.withOpacity(0.9),
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                   const SizedBox(height: 20),
                                 ],
                               ),
@@ -214,6 +238,14 @@ class _PerfilUsuarioScreenState extends State<PerfilUsuarioScreen> {
                                       value: _perfil!.codigoTrabajadorExterno!,
                                       isDarkMode: isDarkMode,
                                     ),
+
+                                  // Teléfono
+                                  _buildInfoCard(
+                                    icon: Icons.phone_outlined,
+                                    label: 'Teléfono',
+                                    value: (_perfil!.telefono ?? '').trim(),
+                                    isDarkMode: isDarkMode,
+                                  ),
 
                                   // Nombre de Usuario
                                   _buildInfoCard(

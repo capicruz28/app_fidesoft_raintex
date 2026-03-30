@@ -11,6 +11,7 @@ class UserProfileModel {
   final String nombre;
   final String apellido;
   final bool esActivo;
+  final String? telefono;
   final String? codigoTrabajadorExterno;
   final String? tipoTrabajador;
   final String? descripcionUsuario;
@@ -25,6 +26,7 @@ class UserProfileModel {
     required this.nombre,
     required this.apellido,
     required this.esActivo,
+    this.telefono,
     this.codigoTrabajadorExterno,
     this.tipoTrabajador,
     this.descripcionUsuario,
@@ -40,6 +42,7 @@ class UserProfileModel {
         nombre: json["nombre"] ?? "",
         apellido: json["apellido"] ?? "",
         esActivo: json["es_activo"] ?? json["esActivo"] ?? true,
+        telefono: json["telefono"]?.toString(),
         codigoTrabajadorExterno: json["codigo_trabajador_externo"] ?? json["codigoTrabajadorExterno"],
         tipoTrabajador: json["tipo_trabajador"] ?? json["tipoTrabajador"],
         descripcionUsuario: json["descripcion_usuario"] ?? json["descripcionUsuario"],
@@ -55,6 +58,7 @@ class UserProfileModel {
         "nombre": nombre,
         "apellido": apellido,
         "es_activo": esActivo,
+        "telefono": telefono,
         "codigo_trabajador_externo": codigoTrabajadorExterno,
         "tipo_trabajador": tipoTrabajador,
         "descripcion_usuario": descripcionUsuario,

@@ -12,6 +12,7 @@ import 'features/auth/presentation/login_screen.dart';
 import 'features/auth/presentation/splash_screen.dart';
 import 'features/auth/presentation/perfil_usuario_screen.dart';
 import 'features/auth/presentation/cambiar_contrasena_screen.dart';
+import 'features/auth/presentation/post_login_gate_screen.dart';
 import 'features/dashboard/presentation/dashboard_screen.dart';
 import 'features/vacaciones/presentation/vacaciones_screen.dart';
 import 'features/vacaciones/presentation/solicitar_vacaciones_screen.dart';
@@ -29,6 +30,7 @@ import 'features/documentos/presentation/avisos_screen.dart';
 import 'features/trabajadores/presentation/trabajadores_screen.dart';
 import 'features/trabajadores/presentation/lista_trabajadores_screen.dart';
 import 'features/trabajadores/presentation/lista_cumpleanos_screen.dart';
+import 'features/trabajadores/presentation/mis_datos_screen.dart';
 import 'core/navigation/app_navigator.dart';
 
 void main() async { // <-- main ahora es ASÍNCRONA
@@ -120,6 +122,7 @@ class FidesoftApp extends StatelessWidget {
         '/splash': (context) => const SplashScreen(),
         '/login': (context) => const LoginScreen(),
         '/dashboard': (context) => const DashboardScreen(),
+        '/post-login': (context) => const PostLoginGateScreen(),
         '/perfil-usuario': (context) => const PerfilUsuarioScreen(),
         '/cambiar-contrasena': (context) => const CambiarContrasenaScreen(),
         
@@ -128,6 +131,7 @@ class FidesoftApp extends StatelessWidget {
         '/permisos': (context) => const PermisosScreen(), 
         '/documentos': (context) => const DocumentosScreen(), 
         '/documentos-empresa': (context) => const DocumentosEmpresaScreen(),
+        '/mis-datos': (context) => const MisDatosScreen(),
         '/trabajadores': (context) => const TrabajadoresScreen(),
         '/evaluaciones': (context) => const Placeholder(child: Center(child: Text('Módulo Evaluaciones'))),
 

@@ -9,6 +9,8 @@ class TrabajadorModel {
   final String descripcionSeccion;
   final String descripcionCargo;
   final String dni;
+  final String? correo;
+  final String? telefono;
   final DateTime? fechaNacimiento;
   final DateTime? fechaIngreso;
   final DateTime? fechaFinContrato;
@@ -23,6 +25,8 @@ class TrabajadorModel {
     required this.descripcionSeccion,
     required this.descripcionCargo,
     required this.dni,
+    this.correo,
+    this.telefono,
     this.fechaNacimiento,
     this.fechaIngreso,
     this.fechaFinContrato,
@@ -39,6 +43,8 @@ class TrabajadorModel {
       descripcionSeccion: json['descripcion_seccion'] ?? json['descripcionSeccion'] ?? '',
       descripcionCargo: json['descripcion_cargo'] ?? json['descripcionCargo'] ?? '',
       dni: json['dni'] ?? '',
+      correo: json['correo']?.toString(),
+      telefono: json['telefono']?.toString(),
       fechaNacimiento: json['fecha_nacimiento'] != null
           ? DateTime.parse(json['fecha_nacimiento'])
           : null,
@@ -62,6 +68,8 @@ class TrabajadorModel {
       'descripcion_seccion': descripcionSeccion,
       'descripcion_cargo': descripcionCargo,
       'dni': dni,
+       if (correo != null) 'correo': correo,
+       if (telefono != null) 'telefono': telefono,
       'fecha_nacimiento': fechaNacimiento?.toIso8601String().split('T')[0],
       'fecha_ingreso': fechaIngreso?.toIso8601String().split('T')[0],
       'fecha_fin_contrato': fechaFinContrato?.toIso8601String().split('T')[0],

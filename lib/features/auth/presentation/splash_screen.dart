@@ -6,7 +6,7 @@ import '../../../data/services/auth_service.dart';
 import '../../../core/providers/user_provider.dart';
 import '../../../core/services/notification_service.dart';
 import 'login_screen.dart';
-import '../../dashboard/presentation/dashboard_screen.dart';
+import 'post_login_gate_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -50,10 +50,10 @@ class _SplashScreenState extends State<SplashScreen> {
           await NotificationService.registerTokenAfterLogin(codigoTrabajador);
         }
 
-        // Navegar al dashboard
+        // Gate post-login: muestra aviso pendiente antes del dashboard (si aplica)
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => const DashboardScreen()),
+          MaterialPageRoute(builder: (context) => const PostLoginGateScreen()),
         );
       } else {
         // No hay token válido, ir a login

@@ -13,8 +13,7 @@ class DetalleTrabajadorScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final edad = trabajador.edad;
-    final dateFormat = DateFormat('dd/MM/yyyy', 'es');
+    final dateFormatNacimiento = DateFormat('dd-MMM', 'en');
 
     return Scaffold(
       appBar: AppBar(
@@ -84,16 +83,22 @@ class DetalleTrabajadorScreen extends StatelessWidget {
               child: Column(
                 children: [
                   _buildInfoRow(
-                    icon: Icons.badge,
-                    label: 'DNI',
-                    value: trabajador.dni,
+                    icon: Icons.email,
+                    label: 'Correo',
+                    value: (trabajador.correo ?? '').trim(),
+                  ),
+                  const Divider(height: 1),
+                  _buildInfoRow(
+                    icon: Icons.phone,
+                    label: 'Teléfono',
+                    value: (trabajador.telefono ?? '').trim(),
                   ),
                   const Divider(height: 1),
                   _buildInfoRow(
                     icon: Icons.cake,
                     label: 'Fecha de Nacimiento',
                     value: trabajador.fechaNacimiento != null
-                        ? '${dateFormat.format(trabajador.fechaNacimiento!)}${edad != null ? ' ($edad años)' : ''}'
+                        ? dateFormatNacimiento.format(trabajador.fechaNacimiento!)
                         : 'No disponible',
                   ),
                 ],
@@ -124,51 +129,6 @@ class DetalleTrabajadorScreen extends StatelessWidget {
                     icon: Icons.work,
                     label: 'Cargo',
                     value: trabajador.descripcionCargo.trim(),
-                  ),
-                  const Divider(height: 1),
-                  _buildInfoRow(
-                    icon: Icons.calendar_today,
-                    label: 'Fecha de Ingreso',
-                    value: trabajador.fechaIngreso != null
-                        ? dateFormat.format(trabajador.fechaIngreso!)
-                        : 'No disponible',
-                  ),
-                  if (trabajador.fechaFinContrato != null) ...[
-                    const Divider(height: 1),
-                    _buildInfoRow(
-                      icon: Icons.event_busy,
-                      label: 'Fecha Fin de Contrato',
-                      value: dateFormat.format(trabajador.fechaFinContrato!),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 20),
-
-            // Códigos
-            _buildSectionTitle('Códigos'),
-            Card(
-              elevation: 2,
-              child: Column(
-                children: [
-                  _buildInfoRow(
-                    icon: Icons.tag,
-                    label: 'Código Área',
-                    value: trabajador.codigoArea,
-                  ),
-                  const Divider(height: 1),
-                  _buildInfoRow(
-                    icon: Icons.tag,
-                    label: 'Código Sección',
-                    value: trabajador.codigoSeccion,
-                  ),
-                  const Divider(height: 1),
-                  _buildInfoRow(
-                    icon: Icons.tag,
-                    label: 'Código Cargo',
-                    value: trabajador.codigoCargo,
                   ),
                 ],
               ),

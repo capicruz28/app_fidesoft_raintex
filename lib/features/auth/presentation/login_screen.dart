@@ -108,8 +108,8 @@ class _LoginScreenState extends State<LoginScreen> {
             backgroundColor: Colors.green,
           ),
         );
-        // Navegar al Dashboard y remover todas las rutas anteriores
-        Navigator.pushNamedAndRemoveUntil(context, '/dashboard', (route) => false);
+        // Gate post-login: muestra aviso pendiente antes del dashboard (si aplica)
+        Navigator.pushNamedAndRemoveUntil(context, '/post-login', (route) => false);
       } else {
         // Login fallido por mensaje de la API
         ScaffoldMessenger.of(context).showSnackBar(

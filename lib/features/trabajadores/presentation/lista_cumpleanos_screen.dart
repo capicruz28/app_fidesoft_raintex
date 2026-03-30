@@ -64,6 +64,39 @@ class _ListaCumpleanosScreenState extends State<ListaCumpleanosScreen> {
     return codigoPattern.hasMatch(texto.trim());
   }
 
+  /// Filtra la lista por texto de búsqueda: nombre, apellido, código, DNI, área, etc.
+  /// Si el usuario escribe varias palabras, todas deben aparecer en el nombre completo.
+  List<TrabajadorModel> _filtrarPorBusqueda(
+    List<TrabajadorModel> lista,
+    String query,
+  ) {
+    if (query.trim().isEmpty) return lista;
+    final q = query.trim().toLowerCase();
+    final palabras = q.split(RegExp(r'\s+')).where((s) => s.isNotEmpty).toList();
+
+    return lista.where((t) {
+      final nombreCompleto = (t.nombreCompleto).toLowerCase();
+      final codigo = (t.codigoTrabajador).toLowerCase();
+      final dni = (t.dni).toLowerCase();
+      final area = (t.descripcionArea).toLowerCase();
+      final seccion = (t.descripcionSeccion).toLowerCase();
+      final cargo = (t.descripcionCargo).toLowerCase();
+
+      // Si hay varias palabras, todas deben estar en el nombre completo (nombre o apellido)
+      if (palabras.length > 1) {
+        return palabras.every((palabra) => nombreCompleto.contains(palabra));
+      }
+
+      // Una sola palabra: buscar en cualquier campo
+      return nombreCompleto.contains(q) ||
+          codigo.contains(q) ||
+          dni.contains(q) ||
+          area.contains(q) ||
+          seccion.contains(q) ||
+          cargo.contains(q);
+    }).toList();
+  }
+
   Future<void> _cargarCumpleanos({int page = 1, String? search}) async {
     setState(() {
       _isLoading = true;
@@ -71,16 +104,14 @@ class _ListaCumpleanosScreenState extends State<ListaCumpleanosScreen> {
     });
 
     try {
-      // Determinar qué parámetro usar según el tipo de búsqueda
+      // Determinar qué parámetro usar según el tipo de búsqueda (igual que en trabajadores)
       String? codigo;
       String? nombre;
-      
+
       if (search != null && search.isNotEmpty) {
         if (_esCodigoTrabajador(search)) {
-          // Si parece un código, usar parámetro codigo
           codigo = search;
         } else {
-          // Si no, usar parámetro nombre para búsqueda general
           nombre = search;
         }
       }
@@ -91,10 +122,13 @@ class _ListaCumpleanosScreenState extends State<ListaCumpleanosScreen> {
         codigo: codigo,
         nombre: nombre,
       );
-      
+
+      final queryActual = _searchController.text.trim();
+      final itemsFiltrados = _filtrarPorBusqueda(response.items, queryActual);
+
       setState(() {
         _trabajadores = response.items;
-        _trabajadoresFiltrados = response.items;
+        _trabajadoresFiltrados = itemsFiltrados;
         _currentPage = response.page;
         _totalPages = response.pages;
         _total = response.total;
@@ -336,8 +370,6 @@ class _ListaCumpleanosScreenState extends State<ListaCumpleanosScreen> {
   }
 
   Widget _buildCumpleaneroCard(TrabajadorModel trabajador) {
-    final edad = trabajador.edad;
-    
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       elevation: 2,
@@ -392,16 +424,6 @@ class _ListaCumpleanosScreenState extends State<ListaCumpleanosScreen> {
                       ),
                     ),
                     const SizedBox(height: 4),
-                    if (edad != null)
-                      Text(
-                        '🎉 Cumple $edad años',
-                        style: TextStyle(
-                          color: const Color(0xFF4CCB9E),
-                          fontWeight: FontWeight.w600,
-                          fontSize: 13,
-                        ),
-                      ),
-                    const SizedBox(height: 4),
                     Text(
                       'Código: ${trabajador.codigoTrabajador}',
                       style: TextStyle(
@@ -417,6 +439,16 @@ class _ListaCumpleanosScreenState extends State<ListaCumpleanosScreen> {
                         fontSize: 12,
                       ),
                       maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      trabajador.descripcionSeccion.trim(),
+                      style: TextStyle(
+                        color: Colors.grey[700],
+                        fontSize: 11,
+                      ),
+                      maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
                   ],

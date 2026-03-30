@@ -1,7 +1,6 @@
 // lib/features/trabajadores/presentation/lista_trabajadores_screen.dart
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import '../../../../data/services/vacaciones_permisos_service.dart';
 import '../../../../data/models/trabajador_model.dart';
 import 'detalle_trabajador_screen.dart';
@@ -331,14 +330,6 @@ class _ListaTrabajadoresScreenState extends State<ListaTrabajadoresScreen> {
                             fontSize: 16,
                           ),
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Código: ${trabajador.codigoTrabajador}',
-                          style: TextStyle(
-                            color: Colors.grey[600],
-                            fontSize: 12,
-                          ),
-                        ),
                       ],
                     ),
                   ),
@@ -353,6 +344,26 @@ class _ListaTrabajadoresScreenState extends State<ListaTrabajadoresScreen> {
                   Text(
                     'DNI: ${trabajador.dni}',
                     style: TextStyle(color: Colors.grey[700]),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 4),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Icons.contact_phone, size: 16, color: Colors.grey[600]),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Tel: ${((trabajador.telefono ?? '').trim().isEmpty ? '-' : (trabajador.telefono ?? '').trim())}'
+                      '${((trabajador.correo ?? '').trim().isNotEmpty ? ' · ${(trabajador.correo ?? '').trim()}' : '')}',
+                      style: TextStyle(
+                        color: Colors.grey[700],
+                        fontSize: 12,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
                 ],
               ),
