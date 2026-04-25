@@ -30,65 +30,35 @@ class DocumentosScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.all(16.0),
         children: <Widget>[
-          /*
-          Padding(
-            padding: const EdgeInsets.only(bottom: 20.0),
-            child: Text(
-              'Consulta de $moduleTitle',
-              style: TextStyle(
-                fontSize: 24, 
-                fontWeight: FontWeight.bold,
-                color: accentColor,
-              ),
-            ),
-          ),
-          */
-          // Submódulo 1: Boletas de pago
+          // Submódulo 1: Aprobación
           _buildSubmoduleTile(
             context,
-            title: 'Boletas de Pago',
-            subtitle: 'Visualiza y descarga tus boletas de los últimos periodos.',
-            icon: FontAwesomeIcons.fileInvoiceDollar,
-            route: '/documentos/boletas', // RUTA DE NIVEL 2
+            title: 'Aprobación',
+            subtitle: 'Aprueba órdenes de compra pendientes.',
+            icon: FontAwesomeIcons.clipboardCheck,
+            route: '/documentos/aprobacion',
             color: primaryColor,
             accentColor: accentColor,
-             // AGREGADO: Pasamos los argumentos necesarios a la siguiente pantalla
             arguments: {
               'primaryColor': primaryColor,
-              'title': 'Boletas de Pago',
-            }
+              'title': 'Aprobación',
+            },
           ),
           const SizedBox(height: 15),
 
-          // Submódulo 2: Certificados
+          // Submódulo 2: Consulta
           _buildSubmoduleTile(
             context,
-            title: 'Certificados',
-            subtitle: 'Solicita y descarga certificados de trabajo y retenciones.',
-            icon: Icons.verified_user_rounded,
-            route: '/documentos/certificados', // RUTA DE NIVEL 2
+            title: 'Consulta',
+            subtitle: 'Consulta órdenes de compra registradas.',
+            icon: FontAwesomeIcons.magnifyingGlass,
+            route: '/documentos/consulta',
             color: primaryColor,
             accentColor: accentColor,
             arguments: {
               'primaryColor': primaryColor,
-              'title': 'Certificados',
-            }
-          ),
-          const SizedBox(height: 15),
-
-          // Submódulo 3: Otros Documentos
-          _buildSubmoduleTile(
-            context,
-            title: 'Otros Documentos',
-            subtitle: 'Accede a políticas internas y documentos generales de la empresa.',
-            icon: Icons.folder_open_rounded,
-            route: '/documentos/otros', // RUTA DE NIVEL 2
-            color: primaryColor,
-            accentColor: accentColor,
-            arguments: {
-              'primaryColor': primaryColor,
-              'title': 'Otros Documentos',
-            }
+              'title': 'Consulta',
+            },
           ),
         ],
       ),

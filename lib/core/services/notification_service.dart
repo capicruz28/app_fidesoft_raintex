@@ -5,7 +5,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'dart:io';
-import '../../data/services/vacaciones_permisos_service.dart';
 import '../../core/navigation/app_navigator.dart';
 import 'dart:convert';
 
@@ -20,7 +19,6 @@ class NotificationService {
   static final FlutterLocalNotificationsPlugin _localNotifications =
       FlutterLocalNotificationsPlugin();
   static final FirebaseMessaging _firebaseMessaging = FirebaseMessaging.instance;
-  static final VacacionesPermisosService _apiService = VacacionesPermisosService();
 
   // Handler para cuando la app está en primer plano
   static Future<void> _firebaseMessagingForegroundHandler(RemoteMessage message) async {
@@ -48,7 +46,7 @@ class NotificationService {
     const AndroidNotificationChannel channel = AndroidNotificationChannel(
       'fidesoft_channel',
       'Fidesoft Notificaciones',
-      description: 'Notificaciones de solicitudes de vacaciones y permisos',
+      description: 'Notificaciones de la aplicación',
       importance: Importance.high,
     );
 
@@ -140,22 +138,6 @@ class NotificationService {
         // Guardar token localmente
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('fcm_token', token);
-        
-        // Registrar token en el backend (si el usuario está logueado)
-        final String? savedToken = prefs.getString('access_token');
-        if (savedToken != null && codigoTrabajador != null) {
-          // Obtener información del dispositivo
-          final deviceInfo = await _getDeviceInfo();
-          
-          await _apiService.registrarTokenDispositivo(
-            tokenFcm: token,
-            codigoTrabajador: codigoTrabajador,
-            plataforma: Platform.isAndroid ? 'A' : 'I',
-            modeloDispositivo: deviceInfo['modelo_dispositivo'],
-            versionApp: deviceInfo['version_app'],
-            versionSo: deviceInfo['version_so'],
-          );
-        }
       }
     } catch (e) {
       print('Error al obtener token FCM: $e');
@@ -166,21 +148,6 @@ class NotificationService {
       print('Token FCM actualizado: $newToken');
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('fcm_token', newToken);
-      
-      // Actualizar token en el backend
-      final String? savedToken = prefs.getString('access_token');
-      final String? codigoTrab = prefs.getString('codigo_trabajador');
-      if (savedToken != null && codigoTrab != null) {
-        final deviceInfo = await _getDeviceInfo();
-        await _apiService.registrarTokenDispositivo(
-          tokenFcm: newToken,
-          codigoTrabajador: codigoTrab,
-          plataforma: Platform.isAndroid ? 'A' : 'I',
-          modeloDispositivo: deviceInfo['modelo_dispositivo'],
-          versionApp: deviceInfo['version_app'],
-          versionSo: deviceInfo['version_so'],
-        );
-      }
     });
   }
 
@@ -193,7 +160,7 @@ class NotificationService {
     const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
       'fidesoft_channel',
       'Fidesoft Notificaciones',
-      channelDescription: 'Notificaciones de solicitudes de vacaciones y permisos',
+      channelDescription: 'Notificaciones de la aplicación',
       importance: Importance.high,
       priority: Priority.high,
       showWhen: true,
@@ -231,48 +198,18 @@ class NotificationService {
   static void _onNotificationOpenedApp(RemoteMessage message) {
     print('App abierta desde notificación: ${message.notification?.title}');
     print('Datos de la notificación: ${message.data}');
-    
-    // Extraer tipo de solicitud de los datos
-    final tipoSolicitud = message.data['tipo_solicitud'] ?? 
-                         message.data['tipo'] ?? 
-                         'V';
-    
+
     // Pequeño delay para asegurar que la app esté lista
     Future.delayed(const Duration(milliseconds: 500), () {
-      _navigateToPendingApprovals(tipoSolicitud);
+      // Módulos de Vacaciones/Permisos fueron retirados; por seguridad llevamos al dashboard.
+      navigatorKey.currentState?.pushNamed('/dashboard');
     });
   }
 
   // Navegar a la pantalla correspondiente según el tipo de notificación
   static void _navigateFromNotification(String? payload) {
-    String tipoSolicitud = 'V'; // Por defecto vacaciones
-    
-    if (payload != null && payload.isNotEmpty) {
-      try {
-        // Intentar parsear el payload como JSON
-        final Map<String, dynamic> data = jsonDecode(payload);
-        tipoSolicitud = data['tipo_solicitud'] ?? 'V';
-      } catch (e) {
-        // Si no es JSON, intentar extraer de string
-        if (payload.contains('tipo_solicitud')) {
-          final match = RegExp(r'tipo_solicitud[:\s]+([VP])').firstMatch(payload);
-          if (match != null) {
-            tipoSolicitud = match.group(1) ?? 'V';
-          }
-        }
-      }
-    }
-    
-    _navigateToPendingApprovals(tipoSolicitud);
-  }
-
-  // Navegar a pendientes de aprobar
-  static void _navigateToPendingApprovals(String tipoSolicitud) {
-    final route = tipoSolicitud == 'P' 
-        ? '/permisos/pendientes-aprobar'
-        : '/vacaciones/pendientes-aprobar';
-    
-    navigatorKey.currentState?.pushNamed(route);
+    // Módulos de Vacaciones/Permisos fueron retirados; por seguridad llevamos al dashboard.
+    navigatorKey.currentState?.pushNamed('/dashboard');
   }
 
   // Registrar token después del login

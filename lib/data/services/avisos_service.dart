@@ -4,7 +4,7 @@ import 'auth_service.dart';
 import '../models/aviso_pendiente_model.dart';
 
 class AvisosService {
-  final String _baseUrl = 'http://170.231.171.118:9096/api/v1';
+  final String _baseUrl = 'http://20.157.65.103:8095/api/v1';
   final AuthService _authService = AuthService();
 
   Future<Map<String, String>> _getHeaders() async {

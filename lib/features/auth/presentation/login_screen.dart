@@ -5,7 +5,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../data/services/auth_service.dart';
 import '../../../core/providers/user_provider.dart'; // Importamos el provider
-import '../../../core/services/notification_service.dart'; // Para registrar token FCM
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -16,10 +15,10 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   // RUC fijo por defecto
-  final _rucController = TextEditingController(text: '20206228815'); 
+  final _rucController = TextEditingController(text: '20600681258');
   final _usuarioController = TextEditingController();
   final _claveController = TextEditingController();
-  
+
   final _formKey = GlobalKey<FormState>();
   final AuthService _authService = AuthService();
   bool _isLoading = false;
@@ -37,7 +36,7 @@ class _LoginScreenState extends State<LoginScreen> {
       if (savedCredentials != null && mounted) {
         // Si hay credenciales guardadas, usarlas
         setState(() {
-          _rucController.text = savedCredentials['ruc'] ?? '20206228815';
+          _rucController.text = savedCredentials['ruc'] ?? '20600681258';
           _usuarioController.text = savedCredentials['usuario'] ?? '';
           _claveController.text = savedCredentials['clave'] ?? '';
           _rememberMe = true;
@@ -61,23 +60,23 @@ class _LoginScreenState extends State<LoginScreen> {
     final String ruc = _rucController.text;
     final String usuario = _usuarioController.text;
     final String clave = _claveController.text;
-    
+
     // Obtenemos la instancia del UserProvider para guardar los datos
     final userProvider = Provider.of<UserProvider>(context, listen: false);
 
     try {
       final userModel = await _authService.login(
-        ruc: ruc, 
-        cusuar: usuario, 
+        ruc: ruc,
+        cusuar: usuario,
         dclave: clave,
       );
 
-       // 🔹 Antes de usar context, verifica si el widget sigue montado
-    if (!mounted) return;
+      // 🔹 Antes de usar context, verifica si el widget sigue montado
+      if (!mounted) return;
 
       if (userModel.strMensaje.isEmpty) {
         // Login exitoso
-        
+
         // Guardar o limpiar credenciales según "Recordarme"
         if (_rememberMe) {
           await _authService.saveCredentials(
@@ -88,19 +87,13 @@ class _LoginScreenState extends State<LoginScreen> {
         } else {
           await _authService.clearSavedCredentials();
         }
-        
+
         // Obtener correo del usuario desde SharedPreferences (ya se guardó en el login)
         final prefs = await SharedPreferences.getInstance();
         final userEmail = prefs.getString('user_email');
-        
+
         // 1. Guardar los datos del usuario, RUC y correo en el Provider
         userProvider.setUser(userModel, ruc, email: userEmail);
-
-        // 2. Registrar token FCM después del login exitoso
-        final codigoTrabajador = userModel.strDato1;
-        if (codigoTrabajador.isNotEmpty) {
-          await NotificationService.registerTokenAfterLogin(codigoTrabajador);
-        }
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -109,7 +102,11 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
         );
         // Gate post-login: muestra aviso pendiente antes del dashboard (si aplica)
-        Navigator.pushNamedAndRemoveUntil(context, '/post-login', (route) => false);
+        Navigator.pushNamedAndRemoveUntil(
+          context,
+          '/post-login',
+          (route) => false,
+        );
       } else {
         // Login fallido por mensaje de la API
         ScaffoldMessenger.of(context).showSnackBar(
@@ -120,22 +117,22 @@ class _LoginScreenState extends State<LoginScreen> {
         );
       }
     } catch (e) {
-          if (!mounted) return; // 👈 evita usar context si ya no está montado
-        //print("🧩 ERROR DE LOGIN ---> $e"); // 👈 mostrará el error completo en flutter logs
+      if (!mounted) return; // 👈 evita usar context si ya no está montado
+      //print("🧩 ERROR DE LOGIN ---> $e"); // 👈 mostrará el error completo en flutter logs
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: $e'), // 👈 muestra todo el texto del error
-            backgroundColor: Colors.red,
-          ),
-        );
-      } finally {
-            if (mounted){ 
-              setState(() {
-                _isLoading = false;
-              });
-            }
-        }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error: $e'), // 👈 muestra todo el texto del error
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
   }
 
   @override
@@ -168,7 +165,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 const SizedBox(height: 10),
                 const Text(
-                  'Sistema de Planillas y RR.HH.',
+                  'Sistema de Logistica-Raintex',
                   style: TextStyle(fontSize: 16, color: Colors.grey),
                 ),
                 const SizedBox(height: 60),
@@ -192,7 +189,8 @@ class _LoginScreenState extends State<LoginScreen> {
                     labelText: 'Usuario',
                     prefixIcon: Icon(Icons.person),
                   ),
-                  validator: (value) => value!.isEmpty ? 'Ingrese usuario' : null,
+                  validator: (value) =>
+                      value!.isEmpty ? 'Ingrese usuario' : null,
                 ),
                 const SizedBox(height: 20),
 
@@ -219,10 +217,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         });
                       },
                     ),
-                    const Text(
-                      'Recordarme',
-                      style: TextStyle(fontSize: 14),
-                    ),
+                    const Text('Recordarme', style: TextStyle(fontSize: 14)),
                   ],
                 ),
                 const SizedBox(height: 30),
@@ -234,7 +229,8 @@ class _LoginScreenState extends State<LoginScreen> {
                     minimumSize: const Size(double.infinity, 55),
                     backgroundColor: Theme.of(context).primaryColor,
                     shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10)),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
                   ),
                   child: _isLoading
                       ? const SizedBox(
@@ -248,9 +244,10 @@ class _LoginScreenState extends State<LoginScreen> {
                       : const Text(
                           'INGRESAR',
                           style: TextStyle(
-                              fontSize: 18,
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold),
+                            fontSize: 18,
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                 ),
               ],

@@ -5,7 +5,6 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../../../core/theme/theme_provider.dart';
 import '../../../core/providers/user_provider.dart'; // <-- Importado
 import '../../../data/services/auth_service.dart';
-import '../../../data/services/vacaciones_permisos_service.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -15,95 +14,20 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
-  int _pendientesVacacionesCount = 0;
-  int _pendientesPermisosCount = 0;
-
-  @override
-  void initState() {
-    super.initState();
-    _cargarPendientes();
-  }
-
-  Future<void> _cargarPendientes() async {
-    try {
-      final userProvider = Provider.of<UserProvider>(context, listen: false);
-      final esAprobador = await userProvider.esAprobador();
-
-      if (esAprobador) {
-        final service = VacacionesPermisosService();
-        final countVacaciones = await service
-            .obtenerConteoPendientesVacaciones();
-        final countPermisos = await service.obtenerConteoPendientesPermisos();
-        if (mounted) {
-          setState(() {
-            _pendientesVacacionesCount = countVacaciones;
-            _pendientesPermisosCount = countPermisos;
-          });
-        }
-      }
-    } catch (e) {
-      // Silenciar errores, no mostrar badge si falla
-    }
-  }
-
   // Lista de módulos reorganizados
   final List<Map<String, dynamic>> modules = const [
-    // 1. Mis Documentos
+    // 1. Ordenes de compra
     {
-      'title': 'Mis Documentos',
-      'subtitle': 'Última Boleta: 01/Oct',
-      'icon': FontAwesomeIcons.fileContract,
-      'metric': 'Últ.',
-      'unit': 'Boleta 01/Oct',
+      'title': 'Ordenes de compra',
+      'subtitle': 'Aprobación y consulta',
+      'icon': FontAwesomeIcons.fileSignature,
+      'metric': '',
+      'unit': '',
       'route': '/documentos',
       'color1': Color(0xFF8B80C1),
       'color2': Color(0xFFA69EDB),
     },
-    // 2. Documentos Empresa (NUEVO)
-    {
-      'title': 'Documentos Empresa',
-      'subtitle': 'Reglamentos y avisos',
-      'icon': Icons.business_center,
-      'metric': '',
-      'unit': '',
-      'route': '/documentos-empresa',
-      'color1': Color(0xFF9B59B6),
-      'color2': Color(0xFFBB8FCE),
-    },
-    // 3. Vacaciones
-    {
-      'title': 'Vacaciones',
-      'subtitle': 'Gestión de vacaciones',
-      'icon': Icons.beach_access,
-      'metric': '15',
-      'unit': 'días pendientes',
-      'route': '/vacaciones',
-      'color1': Color(0xFFFF8282),
-      'color2': Color(0xFFFFAA99),
-    },
-    // 4. Permisos
-    {
-      'title': 'Permisos',
-      'subtitle': 'Solicitudes en cola',
-      'icon': Icons.date_range,
-      'metric': '2',
-      'unit': 'en cola',
-      'route': '/permisos',
-      'color1': Color(0xFF6A7EFF),
-      'color2': Color(0xFF99AAFF),
-    },
-    // 5. Directorio (antes Trabajadores)
-    {
-      'title': 'Directorio',
-      'subtitle': 'Gestión de trabajadores',
-      'icon': Icons.people,
-      'metric': '',
-      'unit': '',
-      'route': '/trabajadores',
-      'color1': Color(0xFF4CCB9E),
-      'color2': Color(0xFF99EECC),
-    },
-    // 6. Mis Datos (al final, color suave distinto)
+    // 2. Mis Datos
     {
       'title': 'Mis Datos',
       'subtitle': 'Detalle del usuario',
@@ -253,18 +177,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
       itemCount: modulesFiltrados.length,
       itemBuilder: (context, index) {
         final module = modulesFiltrados[index];
-        final moduleTitle = module['title'] as String;
-        int? badgeCount;
-
-        if (moduleTitle == 'Vacaciones' && _pendientesVacacionesCount > 0) {
-          badgeCount = _pendientesVacacionesCount;
-        } else if (moduleTitle == 'Permisos' && _pendientesPermisosCount > 0) {
-          badgeCount = _pendientesPermisosCount;
-        }
-
         return _buildModuleCard(
           context,
-          moduleTitle,
+          module['title'] as String,
           module['subtitle'] as String,
           module['icon'] as IconData,
           module['metric'] as String,
@@ -272,7 +187,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
           module['route'] as String,
           module['color1'] as Color,
           module['color2'] as Color,
-          badgeCount: badgeCount,
         );
       },
     );
@@ -288,9 +202,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
     String unit,
     String route,
     Color color1,
-    Color color2, {
-    int? badgeCount,
-  }) {
+    Color color2,
+  ) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     final cardColor1 = isDarkMode
@@ -302,30 +215,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     return InkWell(
       onTap: () async {
-        // Si es Vacaciones o Permisos, recargar pendientes al volver
-        if (title == 'Vacaciones' || title == 'Permisos') {
-          await Navigator.pushNamed(
-            context,
-            route,
-            arguments: {
-              'title': title,
-              'primaryColor': cardColor1,
-              'iconColor': Colors.white,
-            },
-          );
-          // Recargar pendientes al volver
-          _cargarPendientes();
-        } else {
-          Navigator.pushNamed(
-            context,
-            route,
-            arguments: {
-              'title': title,
-              'primaryColor': cardColor1,
-              'iconColor': Colors.white,
-            },
-          );
-        }
+        Navigator.pushNamed(
+          context,
+          route,
+          arguments: {
+            'title': title,
+            'primaryColor': cardColor1,
+            'iconColor': Colors.white,
+          },
+        );
       },
       borderRadius: BorderRadius.circular(24),
       child: Container(
@@ -406,34 +304,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               ),
                               child: Icon(icon, size: 20, color: Colors.white),
                             ),
-                            // Badge de notificación
-                            if (badgeCount != null && badgeCount > 0)
-                              Positioned(
-                                right: -6,
-                                top: -6,
-                                child: Container(
-                                  padding: const EdgeInsets.all(4),
-                                  decoration: const BoxDecoration(
-                                    color: Colors.red,
-                                    shape: BoxShape.circle,
-                                  ),
-                                  constraints: const BoxConstraints(
-                                    minWidth: 18,
-                                    minHeight: 18,
-                                  ),
-                                  child: Text(
-                                    badgeCount > 99
-                                        ? '99+'
-                                        : badgeCount.toString(),
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                    textAlign: TextAlign.center,
-                                  ),
-                                ),
-                              ),
                           ],
                         ),
                       ),
@@ -650,40 +520,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
                 const SizedBox(height: 8),
 
-                // Pendientes de Aprobar (solo para aprobadores)
-                FutureBuilder<bool>(
-                  future: userProvider.esAprobador(),
-                  builder: (context, snapshot) {
-                    // Mostrar indicador de carga mientras verifica
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const SizedBox(
-                        height: 48,
-                        child: Center(
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        ),
-                      );
-                    }
-                    // Si es aprobador, mostrar la opción
-                    if (snapshot.hasData && snapshot.data == true) {
-                      return Column(
-                        children: [
-                          _buildDrawerTile(
-                            context,
-                            'Pendientes de Aprobar',
-                            Icons.pending_actions,
-                            '/vacaciones/pendientes-aprobar',
-                            isDarkMode,
-                            userProvider,
-                          ),
-                          const SizedBox(height: 8),
-                        ],
-                      );
-                    }
-                    // Si no es aprobador o hay error, no mostrar nada
-                    return const SizedBox.shrink();
-                  },
-                ),
-
                 // Tema Oscuro
                 _buildThemeToggleTile(context, isDarkMode, themeProvider),
                 const SizedBox(height: 8),
@@ -761,9 +597,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
             '/dashboard',
             (route) => false,
           );
-        } else if (route == '/vacaciones/pendientes-aprobar') {
-          // Navegación directa sin argumentos
-          Navigator.pushNamed(context, route);
         } else {
           // Navegación a otras pantallas con argumentos
           final arguments = {
