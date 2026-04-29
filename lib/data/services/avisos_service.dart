@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'package:http/http.dart' as http;
 import 'auth_service.dart';
 import '../models/aviso_pendiente_model.dart';
 
@@ -7,22 +6,17 @@ class AvisosService {
   final String _baseUrl = 'http://20.157.65.103:8095/api/v1';
   final AuthService _authService = AuthService();
 
-  Future<Map<String, String>> _getHeaders() async {
-    final token = await _authService.getAccessToken();
-    if (token == null || token.isEmpty) {
-      throw Exception('No hay token de autenticación');
-    }
-    return <String, String>{
-      'Authorization': 'Bearer $token',
+  Map<String, String> _getHeaders() {
+    return const <String, String>{
       'Content-Type': 'application/json',
     };
   }
 
   Future<AvisoPendienteResponse> obtenerAvisoPendiente() async {
     try {
-      final response = await http.get(
+      final response = await _authService.authenticatedGet(
         Uri.parse('$_baseUrl/avisos/ap/pendiente'),
-        headers: await _getHeaders(),
+        headers: _getHeaders(),
       );
 
       if (response.statusCode == 200) {
@@ -45,9 +39,9 @@ class AvisosService {
 
   Future<Map<String, dynamic>> marcarVisualizado() async {
     try {
-      final response = await http.post(
+      final response = await _authService.authenticatedPost(
         Uri.parse('$_baseUrl/avisos/ap/visualizado'),
-        headers: await _getHeaders(),
+        headers: _getHeaders(),
         body: jsonEncode({}),
       );
 
@@ -69,9 +63,9 @@ class AvisosService {
 
   Future<Map<String, dynamic>> aceptarConforme() async {
     try {
-      final response = await http.post(
+      final response = await _authService.authenticatedPost(
         Uri.parse('$_baseUrl/avisos/ap/aceptar'),
-        headers: await _getHeaders(),
+        headers: _getHeaders(),
         body: jsonEncode({'conforme': true}),
       );
 

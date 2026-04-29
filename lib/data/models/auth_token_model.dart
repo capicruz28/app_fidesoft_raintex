@@ -5,17 +5,20 @@ AuthTokenModel authTokenModelFromJson(String str) => AuthTokenModel.fromJson(jso
 
 class AuthTokenModel {
   final String accessToken;
+  final String refreshToken;
   final String tokenType;
   final UserData? userData; // Datos del usuario si vienen en la respuesta
 
   AuthTokenModel({
     required this.accessToken,
+    required this.refreshToken,
     required this.tokenType,
     this.userData,
   });
 
   factory AuthTokenModel.fromJson(Map<String, dynamic> json) => AuthTokenModel(
         accessToken: json["access_token"] ?? json["accessToken"] ?? "",
+        refreshToken: json["refresh_token"] ?? json["refreshToken"] ?? "",
         tokenType: json["token_type"] ?? json["tokenType"] ?? "bearer",
         userData: json["user_data"] != null ? UserData.fromJson(json["user_data"]) : null,
       );

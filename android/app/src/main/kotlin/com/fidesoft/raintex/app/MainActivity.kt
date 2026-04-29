@@ -1,4 +1,4 @@
-package com.fidesoft.app
+package com.fidesoft.raintex.app
 
 import io.flutter.embedding.android.FlutterActivity
 

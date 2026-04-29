@@ -1,6 +1,5 @@
 import 'dart:convert';
-import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
+import 'auth_service.dart';
 
 import '../models/orden_compra_pendiente_model.dart';
 import '../models/orden_compra_consulta_model.dart';
@@ -10,25 +9,20 @@ class OrdenesCompraService {
   // Ruta general del API (misma que auth)
   static const String _baseUrl = 'http://20.157.65.103:8095/api/v1';
 
-  Future<String?> _getAccessToken() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString('access_token');
-  }
+  final AuthService _authService = AuthService();
 
   Future<Map<String, String>> _headers() async {
-    final token = await _getAccessToken();
-    final headers = <String, String>{
+    return <String, String>{
       'Content-Type': 'application/json; charset=UTF-8',
     };
-    if (token != null && token.isNotEmpty) {
-      headers['Authorization'] = 'Bearer $token';
-    }
-    return headers;
   }
 
   Future<List<OrdenCompraPendienteModel>> obtenerPendientes() async {
     final uri = Uri.parse('$_baseUrl/ordenes-compra/pendientes');
-    final response = await http.get(uri, headers: await _headers());
+    final response = await _authService.authenticatedGet(
+      uri,
+      headers: await _headers(),
+    );
 
     if (response.statusCode == 200) {
       final decoded = json.decode(response.body);
@@ -53,7 +47,7 @@ class OrdenesCompraService {
     required int norden,
   }) async {
     final uri = Uri.parse('$_baseUrl/ordenes-compra/aprobar');
-    final response = await http.post(
+    final response = await _authService.authenticatedPost(
       uri,
       headers: await _headers(),
       body: jsonEncode({
@@ -96,7 +90,10 @@ class OrdenesCompraService {
     if (limit != null) qp['limit'] = limit.toString();
 
     final uri = Uri.parse('$_baseUrl/ordenes-compra/consulta').replace(queryParameters: qp.isEmpty ? null : qp);
-    final response = await http.get(uri, headers: await _headers());
+    final response = await _authService.authenticatedGet(
+      uri,
+      headers: await _headers(),
+    );
 
     if (response.statusCode == 200) {
       final decoded = json.decode(response.body);

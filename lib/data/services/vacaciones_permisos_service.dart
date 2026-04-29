@@ -1,21 +1,20 @@
 // lib/data/services/vacaciones_permisos_service.dart
 import 'dart:convert';
-import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
 import '../models/solicitud_model.dart';
 import '../models/saldo_vacaciones_model.dart';
 import '../models/trabajador_model.dart';
+import 'auth_service.dart';
 
 class VacacionesPermisosService {
   // URL del servidor de producción
   // Nota: 10.0.2.2 es la IP especial del emulador Android para acceder al localhost del host
   // Para pruebas locales, usar: http://10.0.2.2:8000/api/v1
   final String baseUrl = 'http://20.157.65.103:8095/api/v1';
+  final AuthService _authService = AuthService();
 
   // Método auxiliar para obtener el token de autenticación
   Future<String?> _getAuthToken() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString('access_token');
+    return _authService.getAccessToken();
   }
 
   // Método auxiliar para obtener el nombre de usuario del token
@@ -24,10 +23,9 @@ class VacacionesPermisosService {
       final token = await _getAuthToken();
       if (token == null) return null;
 
-      final response = await http.get(
+      final response = await _authService.authenticatedGet(
         Uri.parse('$baseUrl/auth/me/'),
         headers: {
-          'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
         },
       );
@@ -90,7 +88,7 @@ class VacacionesPermisosService {
           'usuario_registro': usuarioRegistro,
       };
 
-      final response = await http.post(
+      final response = await _authService.authenticatedPost(
         Uri.parse('$baseUrl/vacaciones/solicitar'),
         headers: await _getHeaders(),
         body: jsonEncode(body),
@@ -119,7 +117,10 @@ class VacacionesPermisosService {
         queryParameters: {'page': page.toString(), 'limit': limit.toString()},
       );
 
-      final response = await http.get(uri, headers: await _getHeaders());
+      final response = await _authService.authenticatedGet(
+        uri,
+        headers: await _getHeaders(),
+      );
 
       if (response.statusCode == 401) {
         throw Exception('SESSION_EXPIRED');
@@ -184,7 +185,7 @@ class VacacionesPermisosService {
   /// Obtener detalle de una solicitud
   Future<SolicitudModel> obtenerSolicitud(int idSolicitud) async {
     try {
-      final response = await http.get(
+      final response = await _authService.authenticatedGet(
         Uri.parse('$baseUrl/vacaciones/solicitud/$idSolicitud'),
         headers: await _getHeaders(),
       );
@@ -202,7 +203,7 @@ class VacacionesPermisosService {
   /// Obtener el conteo de solicitudes pendientes de aprobar
   Future<int> obtenerConteoPendientesAprobar() async {
     try {
-      final response = await http.get(
+      final response = await _authService.authenticatedGet(
         Uri.parse('$baseUrl/vacaciones/pendientes-aprobar'),
         headers: await _getHeaders(),
       );
@@ -236,7 +237,7 @@ class VacacionesPermisosService {
   /// Obtener el conteo de solicitudes de permisos pendientes de aprobar (filtra por tipo_solicitud: "P")
   Future<int> obtenerConteoPendientesPermisos() async {
     try {
-      final response = await http.get(
+      final response = await _authService.authenticatedGet(
         Uri.parse('$baseUrl/vacaciones/pendientes-aprobar'),
         headers: await _getHeaders(),
       );
@@ -278,7 +279,7 @@ class VacacionesPermisosService {
   /// Obtener el conteo de solicitudes de vacaciones pendientes de aprobar (filtra por tipo_solicitud: "V")
   Future<int> obtenerConteoPendientesVacaciones() async {
     try {
-      final response = await http.get(
+      final response = await _authService.authenticatedGet(
         Uri.parse('$baseUrl/vacaciones/pendientes-aprobar'),
         headers: await _getHeaders(),
       );
@@ -321,7 +322,7 @@ class VacacionesPermisosService {
   /// El endpoint devuelve un array con información de aprobación y solicitud combinada
   Future<List<SolicitudModel>> pendientesAprobar() async {
     try {
-      final response = await http.get(
+      final response = await _authService.authenticatedGet(
         Uri.parse('$baseUrl/vacaciones/pendientes-aprobar'),
         headers: await _getHeaders(),
       );
@@ -458,7 +459,7 @@ class VacacionesPermisosService {
     String? ipDispositivo,
   }) async {
     try {
-      final response = await http.post(
+      final response = await _authService.authenticatedPost(
         Uri.parse('$baseUrl/vacaciones/aprobar/$idSolicitud'),
         headers: await _getHeaders(),
         body: jsonEncode({
@@ -485,7 +486,7 @@ class VacacionesPermisosService {
     String? ipDispositivo,
   }) async {
     try {
-      final response = await http.post(
+      final response = await _authService.authenticatedPost(
         Uri.parse('$baseUrl/vacaciones/rechazar/$idSolicitud'),
         headers: await _getHeaders(),
         body: jsonEncode({
@@ -508,7 +509,7 @@ class VacacionesPermisosService {
   /// Obtener aprobaciones de una solicitud
   Future<List<AprobacionModel>> obtenerAprobaciones(int idSolicitud) async {
     try {
-      final response = await http.get(
+      final response = await _authService.authenticatedGet(
         Uri.parse('$baseUrl/vacaciones/aprobaciones/$idSolicitud'),
         headers: await _getHeaders(),
       );
@@ -564,7 +565,7 @@ class VacacionesPermisosService {
   /// Obtener saldo de vacaciones
   Future<SaldoVacacionesModel> obtenerMiSaldo() async {
     try {
-      final response = await http.get(
+      final response = await _authService.authenticatedGet(
         Uri.parse('$baseUrl/vacaciones/mi-saldo'),
         headers: await _getHeaders(),
       );
@@ -582,7 +583,7 @@ class VacacionesPermisosService {
   /// Obtener cat?logos (tipos de permiso, etc.)
   Future<Map<String, dynamic>> obtenerCatalogos() async {
     try {
-      final response = await http.get(
+      final response = await _authService.authenticatedGet(
         Uri.parse('$baseUrl/vacaciones/catalogos'),
         headers: await _getHeaders(),
       );
@@ -634,7 +635,7 @@ class VacacionesPermisosService {
           'usuario_registro': usuarioRegistro,
       };
 
-      final response = await http.post(
+      final response = await _authService.authenticatedPost(
         Uri.parse(
           '$baseUrl/vacaciones/solicitar',
         ), // Mismo endpoint, diferente tipo
@@ -710,7 +711,10 @@ class VacacionesPermisosService {
         '$baseUrl/vacaciones/trabajadores',
       ).replace(queryParameters: queryParams);
 
-      final response = await http.get(uri, headers: await _getHeaders());
+      final response = await _authService.authenticatedGet(
+        uri,
+        headers: await _getHeaders(),
+      );
 
       if (response.statusCode == 200) {
         return TrabajadoresResponse.fromJson(json.decode(response.body));
@@ -768,7 +772,10 @@ class VacacionesPermisosService {
         '$baseUrl/vacaciones/cumpleanos-hoy',
       ).replace(queryParameters: queryParams);
 
-      final response = await http.get(uri, headers: await _getHeaders());
+      final response = await _authService.authenticatedGet(
+        uri,
+        headers: await _getHeaders(),
+      );
 
       if (response.statusCode == 200) {
         return TrabajadoresResponse.fromJson(json.decode(response.body));
@@ -803,7 +810,7 @@ class VacacionesPermisosService {
         if (versionSo != null) 'version_so': versionSo,
       };
 
-      final response = await http.post(
+      final response = await _authService.authenticatedPost(
         Uri.parse('$baseUrl/notificaciones/registrar-token'),
         headers: await _getHeaders(),
         body: jsonEncode(body),

@@ -6,7 +6,7 @@ La app ya tiene el código listo para recibir notificaciones push en iOS (mismo 
 
 1. Entra en [Firebase Console](https://console.firebase.google.com/) y abre el proyecto (el mismo que usa Android).
 2. En la configuración del proyecto, **Añadir app** → elige **iOS**.
-3. **Bundle ID**: debe coincidir con el de Xcode. En este proyecto es **`com.fidesoft.app`**. Usa exactamente este en Firebase al dar de alta la app iOS.
+3. **Bundle ID**: debe coincidir con el de Xcode. En este proyecto es **`com.fidesoft.raintex.app`**. Usa exactamente este en Firebase al dar de alta la app iOS.
 4. Descarga el archivo **GoogleService-Info.plist** que te ofrece Firebase.
 5. **Añade el archivo al proyecto:**
    - Arrastra `GoogleService-Info.plist` a la carpeta **Runner** dentro de Xcode (en el grupo Runner, al mismo nivel que Info.plist).
