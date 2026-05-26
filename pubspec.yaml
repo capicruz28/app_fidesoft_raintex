@@ -66,10 +66,12 @@ dev_dependencies:
   flutter_lints: ^5.0.0
   flutter_launcher_icons: ^0.14.4
 
-flutter_icons:
+flutter_launcher_icons:
   android: true
   ios: true
   image_path: "assets/logo_fidesoft_oc.png"
+  image_path_ios: "assets/logo_fidesoft_ios.png"
+  remove_alpha_ios: true
   adaptive_icon_background: "#FFFFFF"
   adaptive_icon_foreground: "assets/logo_fidesoft_oc.png"
 
