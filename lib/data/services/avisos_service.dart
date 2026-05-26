@@ -1,9 +1,10 @@
 import 'dart:convert';
 import 'auth_service.dart';
 import '../models/aviso_pendiente_model.dart';
+import '../../core/config/app_config.dart';
 
 class AvisosService {
-  final String _baseUrl = 'http://20.157.65.103:8095/api/v1';
+  String get _baseUrl => AppConfig().baseUrl;
   final AuthService _authService = AuthService();
 
   Map<String, String> _getHeaders() {

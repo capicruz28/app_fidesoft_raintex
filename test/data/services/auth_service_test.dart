@@ -7,6 +7,7 @@ import 'package:http/testing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:app_fidesoft/data/services/auth_service.dart';
+import 'package:app_fidesoft/core/config/app_config.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -17,6 +18,7 @@ void main() {
   setUp(() async {
     SharedPreferences.setMockInitialValues({});
     secureStore.clear();
+    AppConfig().setBaseUrl('http://test.local/api/v1');
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(channel, (call) async {
       switch (call.method) {
@@ -151,7 +153,7 @@ void main() {
 
     final service = AuthService(httpClient: client, logger: (_) {});
     final response = await service.authenticatedGet(
-      Uri.parse('http://20.157.65.103:8095/api/v1/protected/test'),
+      Uri.parse('${AppConfig().baseUrl}/protected/test'),
     );
 
     expect(response.statusCode, 200);
@@ -177,7 +179,7 @@ void main() {
 
     await expectLater(
       () async => service.authenticatedGet(
-        Uri.parse('http://20.157.65.103:8095/api/v1/protected/test'),
+        Uri.parse('${AppConfig().baseUrl}/protected/test'),
       ),
       throwsA(isA<Exception>()),
     );

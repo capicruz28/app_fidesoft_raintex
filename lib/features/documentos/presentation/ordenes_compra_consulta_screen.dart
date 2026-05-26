@@ -382,16 +382,54 @@ class _OrdenesCompraConsultaScreenState extends State<OrdenesCompraConsultaScree
           collapsedBackgroundColor: primaryColor.withOpacity(0.10),
           iconColor: primaryColor,
           collapsedIconColor: primaryColor,
+          trailing: const SizedBox.shrink(),
+          tilePadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           leading: _bullet(expanded, primaryColor),
-          title: Text(
-            '$groupId$ctpdocSuffix',
-            style: const TextStyle(fontWeight: FontWeight.w900),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-          subtitle: Text(
-            'Total: $groupTotalLabel · ${list.length} registro(s)',
-            style: TextStyle(color: Colors.grey.shade800, fontWeight: FontWeight.w600),
+          title: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Fila 1: título (una sola línea, máxima prioridad de ancho)
+              Text(
+                '${groupId.trim()}${ctpdocSuffix.trim()}',
+                style: const TextStyle(fontWeight: FontWeight.w900),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 4),
+              // Fila 2: importes (siempre visibles, secundarios al título)
+              Text(
+                groupTotalLabel.trim(),
+                style: TextStyle(
+                  color: primaryColor,
+                  fontWeight: FontWeight.w900,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 6),
+              // Fila 3: metadata + expand icon
+              Row(
+                children: [
+                  _CountBadge(count: list.length),
+                  const SizedBox(width: 6),
+                  Text(
+                    'registros',
+                    style: TextStyle(
+                      color: Colors.grey.shade800,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 12,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const Spacer(),
+                  Icon(
+                    expanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                    color: primaryColor,
+                  ),
+                ],
+              ),
+            ],
           ),
           children: [
             ...list.map((it) => _buildOrderTile(primaryColor, it)),
@@ -418,6 +456,7 @@ class _OrdenesCompraConsultaScreenState extends State<OrdenesCompraConsultaScree
       child: Padding(
         padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Fila 1: N° OC + Importe
             Row(
@@ -427,7 +466,9 @@ class _OrdenesCompraConsultaScreenState extends State<OrdenesCompraConsultaScree
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     text: TextSpan(
-                      style: DefaultTextStyle.of(context).style,
+                      style: DefaultTextStyle.of(context).style.copyWith(
+                        decoration: TextDecoration.none,
+                      ),
                       children: [
                         TextSpan(
                           text: 'N° OC: ',
@@ -435,11 +476,17 @@ class _OrdenesCompraConsultaScreenState extends State<OrdenesCompraConsultaScree
                             fontSize: 12,
                             fontWeight: FontWeight.w900,
                             color: Colors.black54,
+                            decoration: TextDecoration.none,
                           ),
                         ),
                         TextSpan(
                           text: it.ndocum.isEmpty ? '—' : it.ndocum,
-                          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w900),
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w900,
+                            color: Color(0xFFE53935),
+                            decoration: TextDecoration.none,
+                          ),
                         ),
                       ],
                     ),
@@ -457,18 +504,96 @@ class _OrdenesCompraConsultaScreenState extends State<OrdenesCompraConsultaScree
               ],
             ),
             const SizedBox(height: 6),
-            _kvLine(label: 'Proveedor', value: it.proveedor),
+            DetailField(
+              label: 'Proveedor',
+              value: it.proveedor,
+              labelStyle: _detailLabelStyle(),
+              valueStyle: _detailValueStyle(),
+            ),
             const SizedBox(height: 4),
             Row(
               children: [
-                Expanded(child: _kvLine(label: 'F.Emisión', value: emision)),
+                Expanded(
+                  child: DetailField(
+                    label: 'F.Emisión',
+                    value: emision,
+                    labelStyle: _detailLabelStyle(),
+                    valueStyle: _detailValueStyle(),
+                  ),
+                ),
                 const SizedBox(width: 10),
-                Expanded(child: _kvLine(label: 'F.Entrega', value: entrega)),
+                Expanded(
+                  child: DetailField(
+                    label: 'F.Entrega',
+                    value: entrega,
+                    labelStyle: _detailLabelStyle(),
+                    valueStyle: _detailValueStyle(),
+                  ),
+                ),
               ],
             ),
             if (it.cliente.trim().isNotEmpty) ...[
               const SizedBox(height: 4),
-              _kvLine(label: 'Cliente', value: it.cliente.trim()),
+              DetailField(
+                label: 'Cliente',
+                value: it.cliente.trim(),
+                labelStyle: _detailLabelStyle(),
+                valueStyle: _detailValueStyle(),
+              ),
+            ],
+            if (it.ordenTrabajo.trim().isNotEmpty || it.formaPago.trim().isNotEmpty) ...[
+              const SizedBox(height: 4),
+              LayoutBuilder(
+                builder: (context, c) {
+                  return Wrap(
+                    spacing: 8,
+                    runSpacing: 2,
+                    children: [
+                      DetailField(
+                        maxWidth: c.maxWidth,
+                        label: 'OT',
+                        value: it.ordenTrabajo,
+                        labelStyle: _detailLabelStyle(),
+                        valueStyle: _detailValueStyle(),
+                      ),
+                      DetailField(
+                        maxWidth: c.maxWidth,
+                        label: 'Forma de Pago',
+                        value: it.formaPago,
+                        labelStyle: _detailLabelStyle(),
+                        valueStyle: _detailValueStyle(),
+                      ),
+                    ],
+                  );
+                },
+              ),
+            ],
+            if (it.usuarioCreacion.trim().isNotEmpty || it.tipoServicio.trim().isNotEmpty) ...[
+              const SizedBox(height: 4),
+              LayoutBuilder(
+                builder: (context, c) {
+                  return Wrap(
+                    spacing: 8,
+                    runSpacing: 2,
+                    children: [
+                      DetailField(
+                        maxWidth: c.maxWidth,
+                        label: 'Usuario Emi.',
+                        value: it.usuarioCreacion,
+                        labelStyle: _detailLabelStyle(),
+                        valueStyle: _detailValueStyle(),
+                      ),
+                      DetailField(
+                        maxWidth: c.maxWidth,
+                        label: 'Tipo OC',
+                        value: it.tipoServicio,
+                        labelStyle: _detailLabelStyle(),
+                        valueStyle: _detailValueStyle(),
+                      ),
+                    ],
+                  );
+                },
+              ),
             ],
 
             // Acordeón del detalle
@@ -517,6 +642,7 @@ class _OrdenesCompraConsultaScreenState extends State<OrdenesCompraConsultaScree
     final fmt = NumberFormat('#,##0.00', 'en_US');
     final qty = fmt.format((d.qsolic as double));
     final unit = fmt.format((d.ipruni as double));
+    final total = fmt.format((d.qsolic as double) * (d.ipruni as double));
     final desc = (d.ditems as String).isEmpty ? '—' : (d.ditems as String);
     final code = (d.citems as String).isEmpty ? '' : (d.citems as String);
 
@@ -561,9 +687,32 @@ class _OrdenesCompraConsultaScreenState extends State<OrdenesCompraConsultaScree
           const SizedBox(height: 6),
           Row(
             children: [
-              Expanded(child: _kvLine(label: 'Cantidad', value: qty)),
-              const SizedBox(width: 10),
-              Expanded(child: _kvLine(label: 'P. Unit', value: unit)),
+              Expanded(
+                child: DetailField(
+                  label: 'Cant.',
+                  value: qty,
+                  labelStyle: _detailLabelStyle(),
+                  valueStyle: _detailValueStyle(),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: DetailField(
+                  label: 'P. Unit',
+                  value: unit,
+                  labelStyle: _detailLabelStyle(),
+                  valueStyle: _detailValueStyle(),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: DetailField(
+                  label: 'Total',
+                  value: total,
+                  labelStyle: _detailLabelStyle(),
+                  valueStyle: _detailValueStyle(),
+                ),
+              ),
             ],
           ),
         ],
@@ -586,27 +735,102 @@ class _OrdenesCompraConsultaScreenState extends State<OrdenesCompraConsultaScree
     );
   }
 
-  Widget _kvLine({required String label, required String value}) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          '$label: ',
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w800,
-            color: Colors.grey.shade700,
-          ),
+  TextStyle _detailLabelStyle() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return TextStyle(
+      fontFamily: null,
+      fontSize: 12,
+      fontWeight: FontWeight.w800,
+      letterSpacing: 0,
+      height: 1.2,
+      color: isDark ? Colors.white70 : Colors.grey.shade700,
+      decoration: TextDecoration.none,
+      textBaseline: TextBaseline.alphabetic,
+    );
+  }
+
+  TextStyle _detailValueStyle() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return TextStyle(
+      fontFamily: null,
+      fontSize: 12,
+      fontWeight: FontWeight.w800,
+      letterSpacing: 0,
+      height: 1.2,
+      color: isDark ? Colors.white : Colors.black87,
+      decoration: TextDecoration.none,
+      textBaseline: TextBaseline.alphabetic,
+    );
+  }
+
+}
+
+class DetailField extends StatelessWidget {
+  const DetailField({
+    super.key,
+    this.maxWidth = double.infinity,
+    required this.label,
+    required this.value,
+    required this.labelStyle,
+    required this.valueStyle,
+    this.placeholder = '—',
+    this.maxLines = 2,
+  });
+
+  final double maxWidth;
+  final String label;
+  final String? value;
+  final TextStyle labelStyle;
+  final TextStyle valueStyle;
+  final String placeholder;
+  final int maxLines;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = label.trim();
+    final v = (value ?? '').trim();
+    final show = v.isEmpty ? placeholder : v;
+
+    // Importante: en un Wrap, un Row con Flexible puede "estirarse" al ancho disponible
+    // y provocar saltos prematuros. Usamos RichText intrínseco con un maxWidth real.
+    return ConstrainedBox(
+      constraints: BoxConstraints(maxWidth: maxWidth),
+      child: RichText(
+        maxLines: maxLines,
+        overflow: TextOverflow.ellipsis,
+        softWrap: true,
+        text: TextSpan(
+          children: [
+            TextSpan(text: '$l: ', style: labelStyle),
+            TextSpan(text: show, style: valueStyle),
+          ],
         ),
-        Expanded(
-          child: Text(
-            value.isEmpty ? '—' : value,
-            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
+      ),
+    );
+  }
+}
+
+class _CountBadge extends StatelessWidget {
+  const _CountBadge({required this.count});
+
+  final int count;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.70),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        '$count',
+        style: TextStyle(
+          color: Colors.grey.shade800,
+          fontWeight: FontWeight.w900,
+          fontSize: 12,
         ),
-      ],
+      ),
     );
   }
 }

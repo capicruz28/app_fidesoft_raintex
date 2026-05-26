@@ -1,3 +1,5 @@
+import 'orden_compra_consulta_item_model.dart';
+
 class OrdenCompraPendienteModel {
   final String ctpdoc;
   final String ndocum;
@@ -10,6 +12,11 @@ class OrdenCompraPendienteModel {
   final String observacion;
   final String cliente;
   final String tipoDocumento;
+  final String ordenTrabajo;
+  final String formaPago;
+  final String usuarioCreacion;
+  final String tipoServicio;
+  final List<OrdenCompraConsultaItemModel> items;
 
   const OrdenCompraPendienteModel({
     required this.ctpdoc,
@@ -23,6 +30,11 @@ class OrdenCompraPendienteModel {
     required this.observacion,
     required this.cliente,
     required this.tipoDocumento,
+    required this.ordenTrabajo,
+    required this.formaPago,
+    required this.usuarioCreacion,
+    required this.tipoServicio,
+    this.items = const [],
   });
 
   factory OrdenCompraPendienteModel.fromJson(Map<String, dynamic> json) {
@@ -57,6 +69,11 @@ class OrdenCompraPendienteModel {
       observacion: (json['observacion'] ?? '').toString(),
       cliente: (json['cliente'] ?? '').toString(),
       tipoDocumento: (json['tipo_documento'] ?? '').toString(),
+      ordenTrabajo: (json['orden_trabajo'] ?? '').toString().trim(),
+      formaPago: (json['forma_pago'] ?? '').toString().trim(),
+      usuarioCreacion: (json['usuario_creacion'] ?? '').toString().trim(),
+      tipoServicio: (json['tipo_servicio'] ?? '').toString().trim(),
+      items: const [],
     );
   }
 
@@ -74,5 +91,26 @@ class OrdenCompraPendienteModel {
       };
 
   String get selectionKey => '$ctpdoc|$ndocum|$norden';
+
+  OrdenCompraPendienteModel copyWithItems(List<OrdenCompraConsultaItemModel> newItems) {
+    return OrdenCompraPendienteModel(
+      ctpdoc: ctpdoc,
+      ndocum: ndocum,
+      proveedor: proveedor,
+      fechaEmision: fechaEmision,
+      fechaEntrega: fechaEntrega,
+      total: total,
+      monedaCodigo: monedaCodigo,
+      norden: norden,
+      observacion: observacion,
+      cliente: cliente,
+      tipoDocumento: tipoDocumento,
+      ordenTrabajo: ordenTrabajo,
+      formaPago: formaPago,
+      usuarioCreacion: usuarioCreacion,
+      tipoServicio: tipoServicio,
+      items: newItems,
+    );
+  }
 }
 

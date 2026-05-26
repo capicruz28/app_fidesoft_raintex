@@ -7,24 +7,35 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:app_fidesoft/main.dart';
+import 'package:app_fidesoft/core/theme/theme_provider.dart';
+import 'package:app_fidesoft/core/providers/user_provider.dart';
 
 void main() {
   testWidgets('Counter increments smoke test', (WidgetTester tester) async {
+    SharedPreferences.setMockInitialValues({
+      // Evita que SplashScreen redirija sin config durante tests.
+      'base_url_cliente': 'http://test.local/api/v1',
+    });
+
     // Build our app and trigger a frame.
-    await tester.pumpWidget(const FidesoftApp());
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider(create: (context) => ThemeProvider()),
+          ChangeNotifierProvider(create: (context) => UserProvider()),
+        ],
+        child: const FidesoftApp(),
+      ),
+    );
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
-
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
+    // Nota: este proyecto no usa Counter demo; verificamos que el app renderice.
+    // Evitamos pumpAndSettle porque hay loaders/animaciones continuas en Splash.
     await tester.pump();
-
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    await tester.pump(const Duration(milliseconds: 200));
+    expect(find.byType(MaterialApp), findsOneWidget);
   });
 }

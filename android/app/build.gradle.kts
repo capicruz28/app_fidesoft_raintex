@@ -47,15 +47,8 @@ android {
         }
     }
 
-    // Genera APKs por arquitectura para reducir tamaño final de distribución.
-    splits {
-        abi {
-            isEnable = true
-            reset()
-            include("armeabi-v7a", "arm64-v8a", "x86_64")
-            isUniversalApk = false
-        }
-    }
+    // Nota: no configurar splits ABI aquí porque el plugin de Flutter
+    // ya configura `ndk.abiFilters` para el target y genera conflicto.
 }
 
 dependencies {

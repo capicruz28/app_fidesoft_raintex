@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import '../../core/config/app_config.dart';
 import '../models/user_model.dart';
 import '../models/auth_token_model.dart';
 import '../models/user_profile_model.dart';
@@ -13,7 +14,7 @@ class AuthService {
   // URL del servidor de producción
   // Nota: 10.0.2.2 es la IP especial del emulador Android para acceder al localhost del host
   // Para pruebas locales, usar: http://10.0.2.2:8000/api/v1
-  final String baseUrlNuevo = 'http://20.157.65.103:8095/api/v1';
+  String get baseUrlNuevo => AppConfig().baseUrl;
   static const _accessTokenKey = 'access_token';
   static const _refreshTokenKey = 'refresh_token';
   static const _tokenTypeKey = 'token_type';

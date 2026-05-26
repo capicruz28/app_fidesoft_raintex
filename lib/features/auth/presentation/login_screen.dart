@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../../core/config/app_config.dart';
+import '../../../core/config/connection_service.dart';
 import '../../../data/services/auth_service.dart';
 import '../../../core/providers/user_provider.dart'; // Importamos el provider
 
@@ -21,8 +23,29 @@ class _LoginScreenState extends State<LoginScreen> {
 
   final _formKey = GlobalKey<FormState>();
   final AuthService _authService = AuthService();
+  final ConnectionService _connectionService = ConnectionService();
   bool _isLoading = false;
   bool _rememberMe = false;
+
+  void _showBlockingLoader(String message) {
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => AlertDialog(
+        content: Row(
+          children: [
+            const SizedBox(
+              height: 22,
+              width: 22,
+              child: CircularProgressIndicator(strokeWidth: 3),
+            ),
+            const SizedBox(width: 16),
+            Expanded(child: Text(message)),
+          ],
+        ),
+      ),
+    );
+  }
 
   @override
   void initState() {
@@ -65,6 +88,18 @@ class _LoginScreenState extends State<LoginScreen> {
     final userProvider = Provider.of<UserProvider>(context, listen: false);
 
     try {
+      // 1) Obtener baseUrl dinámica desde el servidor central
+      _showBlockingLoader('Verificando cliente...');
+      final baseUrl = await _connectionService.obtenerBaseUrl(ruc);
+
+      if (!mounted) return;
+      Navigator.of(context, rootNavigator: true).pop();
+
+      AppConfig().setBaseUrl(baseUrl);
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('base_url_cliente', baseUrl);
+
+      // 2) Login normal usando la baseUrl del cliente
       final userModel = await _authService.login(
         ruc: ruc,
         cusuar: usuario,
@@ -118,11 +153,16 @@ class _LoginScreenState extends State<LoginScreen> {
       }
     } catch (e) {
       if (!mounted) return; // 👈 evita usar context si ya no está montado
-      //print("🧩 ERROR DE LOGIN ---> $e"); // 👈 mostrará el error completo en flutter logs
+      // Cerrar loader si quedó abierto
+      try {
+        if (Navigator.of(context, rootNavigator: true).canPop()) {
+          Navigator.of(context, rootNavigator: true).pop();
+        }
+      } catch (_) {}
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Error: $e'), // 👈 muestra todo el texto del error
+          content: Text(e.toString().replaceFirst('Exception: ', '')),
           backgroundColor: Colors.red,
         ),
       );

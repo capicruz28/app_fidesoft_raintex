@@ -4,12 +4,13 @@ import '../models/solicitud_model.dart';
 import '../models/saldo_vacaciones_model.dart';
 import '../models/trabajador_model.dart';
 import 'auth_service.dart';
+import '../../core/config/app_config.dart';
 
 class VacacionesPermisosService {
   // URL del servidor de producción
   // Nota: 10.0.2.2 es la IP especial del emulador Android para acceder al localhost del host
   // Para pruebas locales, usar: http://10.0.2.2:8000/api/v1
-  final String baseUrl = 'http://20.157.65.103:8095/api/v1';
+  String get baseUrl => AppConfig().baseUrl;
   final AuthService _authService = AuthService();
 
   // Método auxiliar para obtener el token de autenticación

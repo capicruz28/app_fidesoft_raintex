@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'auth_service.dart';
+import '../../core/config/app_config.dart';
 
 import '../models/orden_compra_pendiente_model.dart';
 import '../models/orden_compra_consulta_model.dart';
@@ -7,7 +8,7 @@ import '../models/orden_compra_consulta_item_model.dart';
 
 class OrdenesCompraService {
   // Ruta general del API (misma que auth)
-  static const String _baseUrl = 'http://20.157.65.103:8095/api/v1';
+  String get _baseUrl => AppConfig().baseUrl;
 
   final AuthService _authService = AuthService();
 
@@ -27,10 +28,64 @@ class OrdenesCompraService {
     if (response.statusCode == 200) {
       final decoded = json.decode(response.body);
       if (decoded is List) {
-        return decoded
-            .whereType<Map<String, dynamic>>()
-            .map(OrdenCompraPendienteModel.fromJson)
-            .toList();
+        // Compatibilidad con 2 formatos:
+        // 1) Lista plana: cada elemento es una "fila" con cabecera + ítem
+        // 2) Lista de cabeceras: cada elemento trae un array en `items`/`detalle`
+        final first = decoded.isNotEmpty ? decoded.first : null;
+        final looksLikeHeaderList = first is Map<String, dynamic> &&
+            ((first['items'] ?? first['detalle'] ?? first['detalle_items'])
+                    is List);
+
+        if (looksLikeHeaderList) {
+          final result = <OrdenCompraPendienteModel>[];
+          for (final row in decoded) {
+            if (row is! Map<String, dynamic>) continue;
+            final header = OrdenCompraPendienteModel.fromJson(row);
+
+            final rawItems = row['items'] ??
+                row['detalle'] ??
+                row['detalle_items'] ??
+                const <dynamic>[];
+            final items = <OrdenCompraConsultaItemModel>[];
+            if (rawItems is List) {
+              for (final it in rawItems) {
+                if (it is Map<String, dynamic>) {
+                  items.add(OrdenCompraConsultaItemModel.fromJson(it));
+                }
+              }
+            }
+
+            result.add(header.copyWithItems(items));
+          }
+          return result;
+        }
+
+        // Formato 1: lista plana (cabecera + ítem en el mismo objeto)
+        final headers = <String, OrdenCompraPendienteModel>{};
+        final itemsByKey = <String, List<OrdenCompraConsultaItemModel>>{};
+        for (final row in decoded) {
+          if (row is! Map<String, dynamic>) continue;
+
+          final h = OrdenCompraPendienteModel.fromJson(row);
+          headers.putIfAbsent(h.selectionKey, () => h);
+          itemsByKey.putIfAbsent(h.selectionKey, () => []);
+
+          final item = OrdenCompraConsultaItemModel.fromJson(row);
+          // Evitar duplicados por orden_detalle (norden en el item)
+          final list = itemsByKey[h.selectionKey]!;
+          if (!list.any((x) => x.norden == item.norden)) {
+            list.add(item);
+          }
+        }
+
+        final result = <OrdenCompraPendienteModel>[];
+        for (final e in headers.entries) {
+          final k = e.key;
+          final hdr = e.value;
+          final its = itemsByKey[k] ?? const <OrdenCompraConsultaItemModel>[];
+          result.add(hdr.copyWithItems(its));
+        }
+        return result;
       }
       throw Exception('Formato inesperado al listar pendientes');
     }

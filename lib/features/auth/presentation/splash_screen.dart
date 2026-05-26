@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../../core/config/app_config.dart';
 import '../../../data/services/auth_service.dart';
 import '../../../core/providers/user_provider.dart';
 import '../../../core/services/notification_service.dart';
@@ -24,6 +25,18 @@ class _SplashScreenState extends State<SplashScreen> {
 
   Future<void> _checkAutoLogin() async {
     try {
+      final prefs = await SharedPreferences.getInstance();
+      final baseUrl = prefs.getString('base_url_cliente');
+      if (baseUrl == null || baseUrl.trim().isEmpty) {
+        if (!mounted) return;
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const LoginScreen()),
+        );
+        return;
+      }
+      AppConfig().setBaseUrl(baseUrl.trim());
+
       final authService = AuthService();
       final userModel = await authService.autoLogin();
 

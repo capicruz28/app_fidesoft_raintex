@@ -10,6 +10,10 @@ class OrdenCompraConsultaModel {
   final String monedaCodigo;
   final String cliente;
   final String tipoDocumento;
+  final String ordenTrabajo;
+  final String formaPago;
+  final String usuarioCreacion;
+  final String tipoServicio;
 
   final List<OrdenCompraConsultaItemModel> items;
 
@@ -23,6 +27,10 @@ class OrdenCompraConsultaModel {
     required this.monedaCodigo,
     required this.cliente,
     required this.tipoDocumento,
+    required this.ordenTrabajo,
+    required this.formaPago,
+    required this.usuarioCreacion,
+    required this.tipoServicio,
     required this.items,
   });
 
@@ -60,6 +68,10 @@ class OrdenCompraConsultaModel {
       monedaCodigo: (json['cmoned'] ?? '').toString(),
       cliente: (json['cliente'] ?? '').toString(),
       tipoDocumento: (json['tipo_documento'] ?? '').toString(),
+      ordenTrabajo: (json['orden_trabajo'] ?? '').toString().trim(),
+      formaPago: (json['forma_pago'] ?? '').toString().trim(),
+      usuarioCreacion: (json['usuario_creacion'] ?? '').toString().trim(),
+      tipoServicio: (json['tipo_servicio'] ?? '').toString().trim(),
       items: items,
     );
   }
@@ -91,6 +103,10 @@ class OrdenCompraConsultaModel {
       monedaCodigo: (json['cmoned'] ?? '').toString(),
       cliente: (json['cliente'] ?? '').toString(),
       tipoDocumento: (json['tipo_documento'] ?? '').toString(),
+      ordenTrabajo: (json['orden_trabajo'] ?? '').toString().trim(),
+      formaPago: (json['forma_pago'] ?? '').toString().trim(),
+      usuarioCreacion: (json['usuario_creacion'] ?? '').toString().trim(),
+      tipoServicio: (json['tipo_servicio'] ?? '').toString().trim(),
       items: items,
     );
   }
@@ -106,6 +122,10 @@ class OrdenCompraConsultaModel {
       monedaCodigo: monedaCodigo,
       cliente: cliente,
       tipoDocumento: tipoDocumento,
+      ordenTrabajo: ordenTrabajo,
+      formaPago: formaPago,
+      usuarioCreacion: usuarioCreacion,
+      tipoServicio: tipoServicio,
       items: newItems,
     );
   }

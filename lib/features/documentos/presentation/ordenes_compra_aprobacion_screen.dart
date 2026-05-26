@@ -22,6 +22,8 @@ class _OrdenesCompraAprobacionScreenState
   String _query = '';
   final Set<String> _selectedKeys = {};
   final Map<String, bool> _groupExpanded = {};
+  final Map<String, bool> _detailExpanded = {}; // key: selectionKey
+  final Set<String> _detailLoading = {};
   bool _approving = false;
 
   @override
@@ -57,6 +59,7 @@ class _OrdenesCompraAprobacionScreenState
           final groupId =
               it.tipoDocumento.trim().isEmpty ? 'Sin tipo' : it.tipoDocumento.trim();
           _groupExpanded.putIfAbsent(groupId, () => true);
+          _detailExpanded.putIfAbsent(it.selectionKey, () => false);
         }
       });
     } catch (e) {
@@ -215,6 +218,44 @@ class _OrdenesCompraAprobacionScreenState
     }
   }
 
+  bool _hasMeaningfulDetails(OrdenCompraPendienteModel it) {
+    if (it.items.isEmpty) return false;
+    return it.items.any(
+      (d) => d.citems.trim().isNotEmpty || d.ditems.trim().isNotEmpty || d.qsolic != 0 || d.ipruni != 0,
+    );
+  }
+
+  Future<void> _ensureDetailLoaded(OrdenCompraPendienteModel it) async {
+    if (_detailLoading.contains(it.selectionKey) || _hasMeaningfulDetails(it)) {
+      return;
+    }
+
+    _detailLoading.add(it.selectionKey);
+    try {
+      final result = await _service.consultar(
+        ctpdoc: it.ctpdoc.trim(),
+        ndocum: it.ndocum.trim(),
+        limit: 50,
+      );
+
+      final match = result.where((x) => x.ctpdoc.trim() == it.ctpdoc.trim() && x.ndocum.trim() == it.ndocum.trim()).toList();
+      if (!mounted) return;
+
+      if (match.isNotEmpty) {
+        setState(() {
+          final idx = _items.indexWhere((x) => x.selectionKey == it.selectionKey);
+          if (idx >= 0) {
+            _items[idx] = _items[idx].copyWithItems(match.first.items);
+          }
+        });
+      }
+    } catch (_) {
+      // Si falla, dejamos el detalle como está para no romper la pantalla.
+    } finally {
+      _detailLoading.remove(it.selectionKey);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
@@ -361,9 +402,7 @@ class _OrdenesCompraAprobacionScreenState
       margin: const EdgeInsets.fromLTRB(12, 10, 12, 0),
       clipBehavior: Clip.antiAlias,
       child: Theme(
-        data: Theme.of(context).copyWith(
-          dividerColor: Colors.transparent,
-        ),
+        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
         child: ExpansionTile(
           key: PageStorageKey('oc_group_$groupId'),
           maintainState: true,
@@ -377,61 +416,86 @@ class _OrdenesCompraAprobacionScreenState
           collapsedBackgroundColor: primaryColor.withOpacity(0.10),
           iconColor: primaryColor,
           collapsedIconColor: primaryColor,
+          trailing: const SizedBox.shrink(),
+          tilePadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           textColor: Colors.black87,
           collapsedTextColor: Colors.black87,
-          title: Row(
+          leading: _bullet(_groupExpanded[groupId] ?? true, primaryColor),
+          title: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                child: Text(
-                  '$title$ctpdocSuffix',
-                  style: const TextStyle(fontWeight: FontWeight.w900),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
+              // Fila 1: título (una sola línea, máxima prioridad de ancho)
+              Text(
+                '${title.trim()}${ctpdocSuffix.trim()}',
+                style: const TextStyle(fontWeight: FontWeight.w900),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
-              const SizedBox(width: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.65),
-                  borderRadius: BorderRadius.circular(999),
+              const SizedBox(height: 4),
+              // Fila 2: importes
+              Text(
+                groupTotalLabel.trim(),
+                style: TextStyle(
+                  color: primaryColor,
+                  fontWeight: FontWeight.w900,
                 ),
-                child: Text(
-                  '${list.length}',
-                  style: TextStyle(
-                    color: Colors.grey.shade800,
-                    fontWeight: FontWeight.w900,
-                    fontSize: 12,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 6),
+              // Fila 3: metadata + checkbox + expand icon
+              Row(
+                children: [
+                  _CountBadge(count: list.length),
+                  const SizedBox(width: 6),
+                  Text(
+                    'registros',
+                    style: TextStyle(
+                      color: Colors.grey.shade800,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 12,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                ),
+                  const Spacer(),
+                  SizedBox(
+                    width: 22,
+                    height: 22,
+                    child: Transform.scale(
+                      scale: 0.9,
+                      child: Checkbox(
+                        value: allSelected ? true : (someSelected ? null : false),
+                        tristate: true,
+                        visualDensity: VisualDensity.compact,
+                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        onChanged: _approving
+                            ? null
+                            : (v) {
+                                final target = v == true;
+                                setState(() {
+                                  for (final it in list) {
+                                    if (target) {
+                                      _selectedKeys.add(it.selectionKey);
+                                    } else {
+                                      _selectedKeys.remove(it.selectionKey);
+                                    }
+                                  }
+                                });
+                              },
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Icon(
+                    (_groupExpanded[groupId] ?? true)
+                        ? Icons.keyboard_arrow_up
+                        : Icons.keyboard_arrow_down,
+                    color: primaryColor,
+                  ),
+                ],
               ),
             ],
-          ),
-          subtitle: Text(
-            selectedInGroup == 0
-                ? 'Total: $groupTotalLabel'
-                : '$selectedInGroup seleccionada(s) · Total: $groupTotalLabel',
-            style: TextStyle(color: Colors.grey.shade800, fontWeight: FontWeight.w600),
-          ),
-          trailing: Checkbox(
-            value: allSelected ? true : (someSelected ? null : false),
-            tristate: true,
-            visualDensity: VisualDensity.compact,
-            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            onChanged: _approving
-                ? null
-                : (v) {
-                    final target = v == true;
-                    setState(() {
-                      for (final it in list) {
-                        if (target) {
-                          _selectedKeys.add(it.selectionKey);
-                        } else {
-                          _selectedKeys.remove(it.selectionKey);
-                        }
-                      }
-                    });
-                  },
           ),
           children: [
             ...list.map((it) => _buildItemTile(it, primaryColor)),
@@ -447,6 +511,7 @@ class _OrdenesCompraAprobacionScreenState
     final emision = _formatDate(it.fechaEmision);
     final entrega = _formatDate(it.fechaEntrega);
     final total = _formatMoney(it);
+    final detailOpen = _detailExpanded[it.selectionKey] ?? false;
 
     return Card(
       margin: const EdgeInsets.fromLTRB(12, 6, 12, 6),
@@ -464,83 +529,230 @@ class _OrdenesCompraAprobacionScreenState
         onTap: _approving ? null : () => _toggleSelected(it, !checked),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          child: Stack(
             children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Fila 1: N° OC (izq) + Importe (der)
-                    Row(
-                      children: [
-                        Expanded(
-                          child: RichText(
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            text: TextSpan(
-                              style: DefaultTextStyle.of(context).style,
-                              children: [
-                                TextSpan(
-                                  text: 'N° OC: ',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w900,
-                                    color: Theme.of(context).brightness ==
-                                            Brightness.dark
-                                        ? Colors.white70
-                                        : Colors.black54,
-                                  ),
-                                ),
-                                TextSpan(
-                                  text: it.ndocum.isEmpty ? '—' : it.ndocum,
-                                  style: const TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w900,
-                                  ),
-                                ),
-                              ],
+              // Contenido (sin reservar ancho en filas 2/3/...)
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Fila 1: reserva espacio a la derecha solo aquí
+                  Row(
+                    children: [
+                      Expanded(
+                        child: RichText(
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          text: TextSpan(
+                            style: DefaultTextStyle.of(context).style.copyWith(
+                              decoration: TextDecoration.none,
                             ),
+                            children: [
+                              TextSpan(
+                                text: 'N° OC: ',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w900,
+                                  color: Theme.of(context).brightness ==
+                                          Brightness.dark
+                                      ? Colors.white70
+                                      : Colors.black54,
+                                  decoration: TextDecoration.none,
+                                ),
+                              ),
+                              TextSpan(
+                                text: it.ndocum.isEmpty ? '—' : it.ndocum,
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w900,
+                                  color: Color(0xFFE53935),
+                                  decoration: TextDecoration.none,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                        const SizedBox(width: 10),
-                        Text(
-                          total,
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w900,
-                            color: primaryColor,
-                          ),
+                      ),
+                      const SizedBox(width: 10),
+                      Text(
+                        total,
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w900,
+                          color: primaryColor,
                         ),
-                      ],
-                    ),
-                    const SizedBox(height: 6),
-                    // Fila 2: Proveedor (usar TODO el ancho disponible)
-                    _kvLine(label: 'Proveedor', value: it.proveedor),
-                    const SizedBox(height: 4),
-                    // Fila 3: Fechas en 2 columnas
-                    Row(
-                      children: [
-                        Expanded(child: _kvLine(label: 'F.Emisión', value: emision)),
-                        const SizedBox(width: 10),
-                        Expanded(child: _kvLine(label: 'F.Entrega', value: entrega)),
-                      ],
-                    ),
-                    if (it.cliente.trim().isNotEmpty) ...[
-                      const SizedBox(height: 4),
-                      // Fila 4: Cliente (usar TODO el ancho disponible)
-                      _kvLine(label: 'Cliente', value: it.cliente.trim()),
+                      ),
+                      const SizedBox(width: 28), // espacio para checkbox flotante
                     ],
+                  ),
+                  const SizedBox(height: 6),
+                  DetailField(
+                    label: 'Proveedor',
+                    value: it.proveedor,
+                    labelStyle: _detailLabelStyle(),
+                    valueStyle: _detailValueStyle(),
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: DetailField(
+                          label: 'F.Emisión',
+                          value: emision,
+                          labelStyle: _detailLabelStyle(),
+                          valueStyle: _detailValueStyle(),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: DetailField(
+                          label: 'F.Entrega',
+                          value: entrega,
+                          labelStyle: _detailLabelStyle(),
+                          valueStyle: _detailValueStyle(),
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (it.cliente.trim().isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    DetailField(
+                      label: 'Cliente',
+                      value: it.cliente.trim(),
+                      labelStyle: _detailLabelStyle(),
+                      valueStyle: _detailValueStyle(),
+                    ),
                   ],
-                ),
+                  if (it.ordenTrabajo.trim().isNotEmpty || it.formaPago.trim().isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    LayoutBuilder(
+                      builder: (context, c) {
+                        return Wrap(
+                          spacing: 8,
+                          runSpacing: 2,
+                          children: [
+                            DetailField(
+                              maxWidth: c.maxWidth,
+                              label: 'OT',
+                              value: it.ordenTrabajo,
+                              labelStyle: _detailLabelStyle(),
+                              valueStyle: _detailValueStyle(),
+                            ),
+                            DetailField(
+                              maxWidth: c.maxWidth,
+                              label: 'Forma de Pago',
+                              value: it.formaPago,
+                              labelStyle: _detailLabelStyle(),
+                              valueStyle: _detailValueStyle(),
+                            ),
+                          ],
+                        );
+                      },
+                    ),
+                  ],
+                  if (it.usuarioCreacion.trim().isNotEmpty || it.tipoServicio.trim().isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    LayoutBuilder(
+                      builder: (context, c) {
+                        return Wrap(
+                          spacing: 8,
+                          runSpacing: 2,
+                          children: [
+                            DetailField(
+                              maxWidth: c.maxWidth,
+                              label: 'Usuario Emi.',
+                              value: it.usuarioCreacion,
+                              labelStyle: _detailLabelStyle(),
+                              valueStyle: _detailValueStyle(),
+                            ),
+                            DetailField(
+                              maxWidth: c.maxWidth,
+                              label: 'Tipo OC',
+                              value: it.tipoServicio,
+                              labelStyle: _detailLabelStyle(),
+                              valueStyle: _detailValueStyle(),
+                            ),
+                          ],
+                        );
+                      },
+                    ),
+                  ],
+
+                  // Acordeón del detalle (contador estable desde el inicio)
+                  const SizedBox(height: 8),
+                  Theme(
+                    data: Theme.of(context).copyWith(
+                      dividerColor: Colors.transparent,
+                    ),
+                    child: ExpansionTile(
+                      key: PageStorageKey('oc_aprob_detail_${it.selectionKey}'),
+                      maintainState: true,
+                      initiallyExpanded: detailOpen,
+                      onExpansionChanged: (v) async {
+                        setState(() {
+                          _detailExpanded[it.selectionKey] = v;
+                        });
+                        // Solo fallback si realmente no vino detalle utilizable
+                        if (v && (it.items.isEmpty || !_hasMeaningfulDetails(it))) {
+                          await _ensureDetailLoaded(it);
+                        }
+                      },
+                      tilePadding: EdgeInsets.zero,
+                      childrenPadding: const EdgeInsets.only(top: 6),
+                      leading: _bullet(detailOpen, primaryColor),
+                      title: Text(
+                        'Detalle (${it.items.length})',
+                        style: const TextStyle(fontWeight: FontWeight.w900),
+                      ),
+                      subtitle: Text(
+                        detailOpen ? 'Contraer' : 'Ver ítems',
+                        style: TextStyle(
+                          color: Colors.grey.shade700,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      children: [
+                        if (_detailLoading.contains(it.selectionKey))
+                          const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 10),
+                            child: Center(child: CircularProgressIndicator()),
+                          )
+                        else if (it.items.isEmpty || !_hasMeaningfulDetails(it))
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            child: Text(
+                              'Sin detalle disponible.',
+                              style: TextStyle(color: Colors.grey.shade700),
+                            ),
+                          )
+                        else
+                          ..._sortedDetailItems(it).map(
+                            (d) => _buildDetailRow(primaryColor, d),
+                          ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(width: 8),
-              Checkbox(
-                value: checked,
-                visualDensity: VisualDensity.compact,
-                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                onChanged:
-                    _approving ? null : (v) => _toggleSelected(it, v == true),
+
+              // Checkbox flotante (no quita ancho al contenido)
+              Positioned(
+                top: -2,
+                right: -2,
+                child: SizedBox(
+                  width: 22,
+                  height: 22,
+                  child: Transform.scale(
+                    scale: 0.9,
+                    child: Checkbox(
+                      value: checked,
+                      visualDensity: VisualDensity.compact,
+                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      onChanged: _approving
+                          ? null
+                          : (v) => _toggleSelected(it, v == true),
+                    ),
+                  ),
+                ),
               ),
             ],
           ),
@@ -549,29 +761,133 @@ class _OrdenesCompraAprobacionScreenState
     );
   }
 
-  Widget _kvLine({required String label, required String value}) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final labelColor = isDark ? Colors.white70 : Colors.black54;
-    final valueColor = isDark ? Colors.white : Colors.black87;
+  Widget _buildDetailRow(Color primaryColor, dynamic d) {
+    // d is OrdenCompraConsultaItemModel
+    final fmt = NumberFormat('#,##0.00', 'en_US');
+    final qty = fmt.format((d.qsolic as double));
+    final unit = fmt.format((d.ipruni as double));
+    final total = fmt.format((d.qsolic as double) * (d.ipruni as double));
+    final desc = (d.ditems as String).isEmpty ? '—' : (d.ditems as String);
+    final code = (d.citems as String).isEmpty ? '' : (d.citems as String);
 
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          '$label: ',
-          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: labelColor),
-        ),
-        Expanded(
-          child: Text(
-            value.isEmpty ? '—' : value,
-            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: valueColor),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: primaryColor.withOpacity(0.06),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  '${d.norden}. $desc',
+                  style: const TextStyle(fontWeight: FontWeight.w900),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              if (code.isNotEmpty)
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.7),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Text(
+                    code,
+                    style: TextStyle(
+                      fontWeight: FontWeight.w900,
+                      color: Colors.grey.shade800,
+                      fontSize: 11,
+                    ),
+                  ),
+                ),
+            ],
           ),
-        ),
-      ],
+          const SizedBox(height: 6),
+          Row(
+            children: [
+              Expanded(
+                child: DetailField(
+                  label: 'Cant.',
+                  value: qty,
+                  labelStyle: _detailLabelStyle(),
+                  valueStyle: _detailValueStyle(),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: DetailField(
+                  label: 'P. Unit',
+                  value: unit,
+                  labelStyle: _detailLabelStyle(),
+                  valueStyle: _detailValueStyle(),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: DetailField(
+                  label: 'Total',
+                  value: total,
+                  labelStyle: _detailLabelStyle(),
+                  valueStyle: _detailValueStyle(),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
+
+  List<dynamic> _sortedDetailItems(OrdenCompraPendienteModel it) {
+    final list = it.items.toList();
+    list.sort((a, b) => a.norden.compareTo(b.norden));
+    return list;
+  }
+
+  Widget _bullet(bool expanded, Color primaryColor) {
+    return Icon(
+      expanded ? Icons.radio_button_checked : Icons.radio_button_unchecked,
+      size: 18,
+      color: primaryColor,
+    );
+  }
+
+  TextStyle _detailLabelStyle() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return TextStyle(
+      fontFamily: null,
+      fontSize: 12,
+      fontWeight: FontWeight.w800,
+      letterSpacing: 0,
+      height: 1.2,
+      color: isDark ? Colors.white70 : Colors.black54,
+      decoration: TextDecoration.none,
+      textBaseline: TextBaseline.alphabetic,
+    );
+  }
+
+  TextStyle _detailValueStyle() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return TextStyle(
+      fontFamily: null,
+      fontSize: 12,
+      fontWeight: FontWeight.w800,
+      letterSpacing: 0,
+      height: 1.2,
+      color: isDark ? Colors.white : Colors.black87,
+      decoration: TextDecoration.none,
+      textBaseline: TextBaseline.alphabetic,
+    );
+  }
+
+  // Detail field row: label + value with reserved space for empty values.
 
   // _chip removed (unused)
 
@@ -652,6 +968,74 @@ class _OrdenesCompraAprobacionScreenState
             borderSide: BorderSide(color: primaryColor, width: 2),
           ),
           isDense: true,
+        ),
+      ),
+    );
+  }
+}
+
+class DetailField extends StatelessWidget {
+  const DetailField({
+    super.key,
+    this.maxWidth = double.infinity,
+    required this.label,
+    required this.value,
+    required this.labelStyle,
+    required this.valueStyle,
+    this.placeholder = '—',
+    this.maxLines = 2,
+  });
+
+  final double maxWidth;
+  final String label;
+  final String? value;
+  final TextStyle labelStyle;
+  final TextStyle valueStyle;
+  final String placeholder;
+  final int maxLines;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = label.trim();
+    final v = (value ?? '').trim();
+    final show = v.isEmpty ? placeholder : v;
+
+    return ConstrainedBox(
+      constraints: BoxConstraints(maxWidth: maxWidth),
+      child: RichText(
+        maxLines: maxLines,
+        overflow: TextOverflow.ellipsis,
+        softWrap: true,
+        text: TextSpan(
+          children: [
+            TextSpan(text: '$l: ', style: labelStyle),
+            TextSpan(text: show, style: valueStyle),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CountBadge extends StatelessWidget {
+  const _CountBadge({required this.count});
+
+  final int count;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.70),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        '$count',
+        style: TextStyle(
+          color: Colors.grey.shade800,
+          fontWeight: FontWeight.w900,
+          fontSize: 12,
         ),
       ),
     );

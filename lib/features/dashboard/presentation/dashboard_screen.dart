@@ -27,17 +27,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
       'color1': Color(0xFF8B80C1),
       'color2': Color(0xFFA69EDB),
     },
-    // 2. Mis Datos
-    {
-      'title': 'Mis Datos',
-      'subtitle': 'Detalle del usuario',
-      'icon': Icons.person,
-      'metric': '',
-      'unit': '',
-      'route': '/mis-datos',
-      'color1': Color(0xFF5A8D8B),
-      'color2': Color(0xFF7CA7A5),
-    },
+    // 2. Mis Datos (oculto por requerimiento)
+    // {
+    //   'title': 'Mis Datos',
+    //   'subtitle': 'Detalle del usuario',
+    //   'icon': Icons.person,
+    //   'metric': '',
+    //   'unit': '',
+    //   'route': '/mis-datos',
+    //   'color1': Color(0xFF5A8D8B),
+    //   'color2': Color(0xFF7CA7A5),
+    // },
     /*
     // GRUPO 2: 10 COLORES SEMI-INTENSOS ANTERIORES
     {
