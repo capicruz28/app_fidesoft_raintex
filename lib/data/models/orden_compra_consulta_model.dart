@@ -14,6 +14,7 @@ class OrdenCompraConsultaModel {
   final String formaPago;
   final String usuarioCreacion;
   final String tipoServicio;
+  final String estadoOc;
 
   final List<OrdenCompraConsultaItemModel> items;
 
@@ -31,6 +32,7 @@ class OrdenCompraConsultaModel {
     required this.formaPago,
     required this.usuarioCreacion,
     required this.tipoServicio,
+    required this.estadoOc,
     required this.items,
   });
 
@@ -72,6 +74,7 @@ class OrdenCompraConsultaModel {
       formaPago: (json['forma_pago'] ?? '').toString().trim(),
       usuarioCreacion: (json['usuario_creacion'] ?? '').toString().trim(),
       tipoServicio: (json['tipo_servicio'] ?? '').toString().trim(),
+      estadoOc: (json['estado_oc'] ?? '').toString().trim(),
       items: items,
     );
   }
@@ -107,6 +110,7 @@ class OrdenCompraConsultaModel {
       formaPago: (json['forma_pago'] ?? '').toString().trim(),
       usuarioCreacion: (json['usuario_creacion'] ?? '').toString().trim(),
       tipoServicio: (json['tipo_servicio'] ?? '').toString().trim(),
+      estadoOc: (json['estado_oc'] ?? '').toString().trim(),
       items: items,
     );
   }
@@ -126,6 +130,7 @@ class OrdenCompraConsultaModel {
       formaPago: formaPago,
       usuarioCreacion: usuarioCreacion,
       tipoServicio: tipoServicio,
+      estadoOc: estadoOc,
       items: newItems,
     );
   }

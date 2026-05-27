@@ -13,7 +13,8 @@ class OrdenesCompraConsultaScreen extends StatefulWidget {
       _OrdenesCompraConsultaScreenState();
 }
 
-class _OrdenesCompraConsultaScreenState extends State<OrdenesCompraConsultaScreen> {
+class _OrdenesCompraConsultaScreenState
+    extends State<OrdenesCompraConsultaScreen> {
   final OrdenesCompraService _service = OrdenesCompraService();
 
   bool _loading = false;
@@ -29,6 +30,8 @@ class _OrdenesCompraConsultaScreenState extends State<OrdenesCompraConsultaScree
   int _fLimit = 200;
 
   String _query = '';
+  bool _isGroupedView = false;
+  bool _isFilterExpanded = true;
 
   final Map<String, bool> _groupExpanded = {};
   final Map<String, bool> _detailExpanded = {}; // key: orderKey
@@ -94,12 +97,23 @@ class _OrdenesCompraConsultaScreenState extends State<OrdenesCompraConsultaScree
 
   Future<void> _search() async {
     setState(() {
-      _fCtpdoc = _ctpdocCtrl.text.trim().isEmpty ? null : _ctpdocCtrl.text.trim();
-      _fNdocum = _ndocumCtrl.text.trim().isEmpty ? null : _ndocumCtrl.text.trim();
-      _fFemisi = _femisiCtrl.text.trim().isEmpty ? null : _femisiCtrl.text.trim();
-      _fCliente = _clienteCtrl.text.trim().isEmpty ? null : _clienteCtrl.text.trim();
-      _fProveedor = _proveedorCtrl.text.trim().isEmpty ? null : _proveedorCtrl.text.trim();
+      _fCtpdoc = _ctpdocCtrl.text.trim().isEmpty
+          ? null
+          : _ctpdocCtrl.text.trim();
+      _fNdocum = _ndocumCtrl.text.trim().isEmpty
+          ? null
+          : _ndocumCtrl.text.trim();
+      _fFemisi = _femisiCtrl.text.trim().isEmpty
+          ? null
+          : _femisiCtrl.text.trim();
+      _fCliente = _clienteCtrl.text.trim().isEmpty
+          ? null
+          : _clienteCtrl.text.trim();
+      _fProveedor = _proveedorCtrl.text.trim().isEmpty
+          ? null
+          : _proveedorCtrl.text.trim();
       _fLimit = 200;
+      _isFilterExpanded = false;
     });
     await _load();
   }
@@ -122,7 +136,23 @@ class _OrdenesCompraConsultaScreenState extends State<OrdenesCompraConsultaScree
     for (final it in _filtered) {
       map.putIfAbsent(it.groupId, () => []).add(it);
     }
+    for (final list in map.values) {
+      list.sort((a, b) => b.ndocum.compareTo(a.ndocum));
+    }
     return map;
+  }
+
+  List<OrdenCompraConsultaModel> get _linearDisplayItems {
+    final items = List<OrdenCompraConsultaModel>.from(_filtered);
+    items.sort((a, b) => b.ndocum.compareTo(a.ndocum));
+    return items;
+  }
+
+  String _ocIdentification(String ctpdoc, String ndocum) {
+    final c = ctpdoc.trim();
+    final n = ndocum.trim();
+    if (c.isEmpty && n.isEmpty) return '—';
+    return '$c-$n';
   }
 
   String _formatDate(DateTime? dt) {
@@ -151,12 +181,15 @@ class _OrdenesCompraConsultaScreenState extends State<OrdenesCompraConsultaScree
 
   @override
   Widget build(BuildContext context) {
-    final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
-    final primaryColor = args?['primaryColor'] as Color? ?? const Color(0xFF0D47A1);
+    final args =
+        ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+    final primaryColor =
+        args?['primaryColor'] as Color? ?? const Color(0xFF0D47A1);
     final title = args?['title'] as String? ?? 'Consulta';
 
     final grouped = _grouped;
     final groupKeys = grouped.keys.toList()..sort();
+    final resultsCount = _filtered.length;
 
     return Scaffold(
       appBar: AppBar(
@@ -173,7 +206,8 @@ class _OrdenesCompraConsultaScreenState extends State<OrdenesCompraConsultaScree
       ),
       body: Column(
         children: [
-          _buildFiltersBar(primaryColor),
+          _buildSummaryHeader(primaryColor, resultsCount),
+          _buildFiltersPanel(primaryColor),
           Expanded(
             child: RefreshIndicator(
               onRefresh: _search,
@@ -185,51 +219,73 @@ class _OrdenesCompraConsultaScreenState extends State<OrdenesCompraConsultaScree
                       ],
                     )
                   : _error.isNotEmpty
-                      ? ListView(
-                          padding: const EdgeInsets.all(16),
-                          children: [
-                            Text(
-                              'No se pudo cargar la consulta.',
-                              style: Theme.of(context).textTheme.titleMedium,
-                            ),
-                            const SizedBox(height: 8),
-                            Text(_error),
-                            const SizedBox(height: 16),
-                            FilledButton(
-                              onPressed: _search,
-                              child: const Text('Reintentar'),
-                            ),
-                          ],
-                        )
-                      : _items.isEmpty && _query.trim().isEmpty && _fCtpdoc == null && _fNdocum == null && _fFemisi == null && _fCliente == null && _fProveedor == null
-                          ? ListView(
-                              padding: const EdgeInsets.all(16),
-                              children: const [
-                                SizedBox(height: 60),
-                                Icon(Icons.manage_search, size: 48, color: Colors.grey),
-                                SizedBox(height: 12),
-                                Center(child: Text('Usa los filtros y toca “Buscar” para consultar.')),
-                              ],
-                            )
-                          : groupKeys.isEmpty
-                          ? ListView(
-                              padding: const EdgeInsets.all(16),
-                              children: const [
-                                SizedBox(height: 60),
-                                Icon(Icons.search_off, size: 48, color: Colors.grey),
-                                SizedBox(height: 12),
-                                Center(child: Text('No hay resultados con los filtros actuales.')),
-                              ],
-                            )
-                          : ListView.builder(
-                              padding: const EdgeInsets.only(bottom: 24),
-                              itemCount: groupKeys.length,
-                              itemBuilder: (context, i) {
-                                final k = groupKeys[i];
-                                final list = grouped[k]!;
-                                return _buildGroup(primaryColor, k, list);
-                              },
-                            ),
+                  ? ListView(
+                      padding: const EdgeInsets.all(16),
+                      children: [
+                        Text(
+                          'No se pudo cargar la consulta.',
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                        const SizedBox(height: 8),
+                        Text(_error),
+                        const SizedBox(height: 16),
+                        FilledButton(
+                          onPressed: _search,
+                          child: const Text('Reintentar'),
+                        ),
+                      ],
+                    )
+                  : _items.isEmpty &&
+                        _query.trim().isEmpty &&
+                        _fCtpdoc == null &&
+                        _fNdocum == null &&
+                        _fFemisi == null &&
+                        _fCliente == null &&
+                        _fProveedor == null
+                  ? ListView(
+                      padding: const EdgeInsets.all(16),
+                      children: const [
+                        SizedBox(height: 60),
+                        Icon(Icons.manage_search, size: 48, color: Colors.grey),
+                        SizedBox(height: 12),
+                        Center(
+                          child: Text(
+                            'Usa los filtros y toca “Buscar” para consultar.',
+                          ),
+                        ),
+                      ],
+                    )
+                  : groupKeys.isEmpty
+                  ? ListView(
+                      padding: const EdgeInsets.all(16),
+                      children: const [
+                        SizedBox(height: 60),
+                        Icon(Icons.search_off, size: 48, color: Colors.grey),
+                        SizedBox(height: 12),
+                        Center(
+                          child: Text(
+                            'No hay resultados con los filtros actuales.',
+                          ),
+                        ),
+                      ],
+                    )
+                  : ListView.builder(
+                      padding: const EdgeInsets.only(bottom: 24),
+                      itemCount: _isGroupedView
+                          ? groupKeys.length
+                          : _linearDisplayItems.length,
+                      itemBuilder: (context, i) {
+                        if (_isGroupedView) {
+                          final k = groupKeys[i];
+                          final list = grouped[k]!;
+                          return _buildGroup(primaryColor, k, list);
+                        }
+                        return _buildOrderTile(
+                          primaryColor,
+                          _linearDisplayItems[i],
+                        );
+                      },
+                    ),
             ),
           ),
         ],
@@ -237,99 +293,243 @@ class _OrdenesCompraConsultaScreenState extends State<OrdenesCompraConsultaScree
     );
   }
 
-  Widget _buildFiltersBar(Color primaryColor) {
+  Widget _buildSummaryHeader(Color primaryColor, int resultsCount) {
+    return Material(
+      color: Theme.of(context).brightness == Brightness.dark
+          ? Colors.grey.shade900
+          : Colors.white,
+      elevation: 1,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+        child: Row(
+          children: [
+            Icon(Icons.manage_search, color: primaryColor),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Resultados encontrados: $resultsCount',
+                    style: const TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                  Text(
+                    _isFilterExpanded
+                        ? 'Toca “Buscar” para ver resultados'
+                        : 'Filtrado aplicado',
+                    style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+                  ),
+                ],
+              ),
+            ),
+            _buildViewModeButtons(primaryColor),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildViewModeButtons(Color primaryColor) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _buildViewModeButton(
+          primaryColor: primaryColor,
+          icon: Icons.view_list,
+          tooltip: 'Vista lista',
+          selected: !_isGroupedView,
+          onTap: () {
+            if (_isGroupedView) setState(() => _isGroupedView = false);
+          },
+        ),
+        const SizedBox(width: 6),
+        _buildViewModeButton(
+          primaryColor: primaryColor,
+          icon: Icons.layers_outlined,
+          tooltip: 'Vista agrupada',
+          selected: _isGroupedView,
+          onTap: () {
+            if (!_isGroupedView) setState(() => _isGroupedView = true);
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildViewModeButton({
+    required Color primaryColor,
+    required IconData icon,
+    required String tooltip,
+    required bool selected,
+    required VoidCallback onTap,
+  }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Tooltip(
+      message: tooltip,
+      child: InkWell(
+        customBorder: const CircleBorder(),
+        onTap: onTap,
+        child: CircleAvatar(
+          radius: 20,
+          backgroundColor: selected
+              ? primaryColor.withOpacity(0.18)
+              : (isDark ? Colors.grey.shade800 : Colors.grey.shade200),
+          child: Icon(
+            icon,
+            size: 20,
+            color: selected ? primaryColor : Colors.grey.shade500,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFiltersPanel(Color primaryColor) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
-      child: Card(
-        elevation: 0,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(14),
-          side: BorderSide(color: Colors.black.withOpacity(0.06)),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Column(
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    flex: 5,
-                    child: _field(
-                      _femisiCtrl,
-                      label: 'F.Emisión',
-                      hint: 'YYYY-MM-DD',
-                      keyboardType: TextInputType.datetime,
-                      inputFormatters: [UpperCaseTextFormatter()],
-                      textCapitalization: TextCapitalization.characters,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    flex: 3,
-                    child: _field(
-                      _ctpdocCtrl,
-                      label: 'Tipo Doc.',
-                      inputFormatters: [UpperCaseTextFormatter()],
-                      textCapitalization: TextCapitalization.characters,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    flex: 4,
-                    child: _field(
-                      _ndocumCtrl,
-                      label: 'N° OC',
-                      keyboardType: TextInputType.number,
-                      inputFormatters: [UpperCaseTextFormatter()],
-                      textCapitalization: TextCapitalization.characters,
-                    ),
-                  ),
-                ],
+      child: Column(
+        children: [
+          InkWell(
+            borderRadius: BorderRadius.circular(14),
+            onTap: () => setState(() => _isFilterExpanded = !_isFilterExpanded),
+            child: Material(
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? Colors.grey.shade900
+                  : Colors.white,
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+                side: BorderSide(color: Colors.black.withOpacity(0.06)),
               ),
-              const SizedBox(height: 10),
-              Row(
-                children: [
-                  Expanded(
-                    child: _field(
-                      _clienteCtrl,
-                      label: 'Cliente',
-                      inputFormatters: [UpperCaseTextFormatter()],
-                      textCapitalization: TextCapitalization.characters,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+                child: Row(
+                  children: [
+                    Icon(Icons.tune, color: primaryColor),
+                    const SizedBox(width: 10),
+                    const Expanded(
+                      child: Text(
+                        'Filtros',
+                        style: TextStyle(fontWeight: FontWeight.w900),
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: _field(
-                      _proveedorCtrl,
-                      label: 'Proveedor',
-                      inputFormatters: [UpperCaseTextFormatter()],
-                      textCapitalization: TextCapitalization.characters,
+                    Icon(
+                      _isFilterExpanded
+                          ? Icons.keyboard_arrow_up
+                          : Icons.keyboard_arrow_down,
+                      color: primaryColor,
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              SizedBox(
-                width: double.infinity,
-                height: 46,
-                child: FilledButton.icon(
-                  onPressed: _loading ? null : _search,
-                  icon: _loading
-                      ? const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
-                        )
-                      : const Icon(Icons.search),
-                  label: Text(_loading ? 'Buscando...' : 'Buscar'),
-                  style: FilledButton.styleFrom(backgroundColor: primaryColor),
+                  ],
                 ),
               ),
-            ],
+            ),
           ),
+          AnimatedCrossFade(
+            duration: const Duration(milliseconds: 180),
+            crossFadeState: _isFilterExpanded
+                ? CrossFadeState.showFirst
+                : CrossFadeState.showSecond,
+            firstChild: Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: _buildFiltersCard(primaryColor),
+            ),
+            secondChild: const SizedBox.shrink(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFiltersCard(Color primaryColor) {
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(14),
+        side: BorderSide(color: Colors.black.withOpacity(0.06)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  flex: 5,
+                  child: _field(
+                    _femisiCtrl,
+                    label: 'F.Emisión',
+                    hint: 'YYYY-MM-DD',
+                    keyboardType: TextInputType.datetime,
+                    inputFormatters: [UpperCaseTextFormatter()],
+                    textCapitalization: TextCapitalization.characters,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  flex: 3,
+                  child: _field(
+                    _ctpdocCtrl,
+                    label: 'Tipo Doc.',
+                    inputFormatters: [UpperCaseTextFormatter()],
+                    textCapitalization: TextCapitalization.characters,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  flex: 4,
+                  child: _field(
+                    _ndocumCtrl,
+                    label: 'N° OC',
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [UpperCaseTextFormatter()],
+                    textCapitalization: TextCapitalization.characters,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Expanded(
+                  child: _field(
+                    _clienteCtrl,
+                    label: 'Cliente',
+                    inputFormatters: [UpperCaseTextFormatter()],
+                    textCapitalization: TextCapitalization.characters,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _field(
+                    _proveedorCtrl,
+                    label: 'Proveedor',
+                    inputFormatters: [UpperCaseTextFormatter()],
+                    textCapitalization: TextCapitalization.characters,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              height: 46,
+              child: FilledButton.icon(
+                onPressed: _loading ? null : _search,
+                icon: _loading
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Icon(Icons.search),
+                label: Text(_loading ? 'Buscando...' : 'Buscar'),
+                style: FilledButton.styleFrom(backgroundColor: primaryColor),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -353,7 +553,10 @@ class _OrdenesCompraConsultaScreenState extends State<OrdenesCompraConsultaScree
         hintText: hint,
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
         isDense: true,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 10,
+          vertical: 12,
+        ),
         labelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
         hintStyle: const TextStyle(fontSize: 12),
       ),
@@ -361,9 +564,16 @@ class _OrdenesCompraConsultaScreenState extends State<OrdenesCompraConsultaScree
     );
   }
 
-  Widget _buildGroup(Color primaryColor, String groupId, List<OrdenCompraConsultaModel> list) {
+  Widget _buildGroup(
+    Color primaryColor,
+    String groupId,
+    List<OrdenCompraConsultaModel> list,
+  ) {
     final groupTotalLabel = _formatTotalsByCurrency(list);
-    final ctpdocSet = list.map((e) => e.ctpdoc.trim()).where((e) => e.isNotEmpty).toSet();
+    final ctpdocSet = list
+        .map((e) => e.ctpdoc.trim())
+        .where((e) => e.isNotEmpty)
+        .toSet();
     final ctpdocSuffix = ctpdocSet.length == 1 ? ' (${ctpdocSet.first})' : '';
 
     final expanded = _groupExpanded[groupId] ?? true;
@@ -377,7 +587,8 @@ class _OrdenesCompraConsultaScreenState extends State<OrdenesCompraConsultaScree
           key: PageStorageKey('oc_consulta_group_$groupId'),
           maintainState: true,
           initiallyExpanded: expanded,
-          onExpansionChanged: (v) => setState(() => _groupExpanded[groupId] = v),
+          onExpansionChanged: (v) =>
+              setState(() => _groupExpanded[groupId] = v),
           backgroundColor: primaryColor.withOpacity(0.10),
           collapsedBackgroundColor: primaryColor.withOpacity(0.10),
           iconColor: primaryColor,
@@ -424,7 +635,9 @@ class _OrdenesCompraConsultaScreenState extends State<OrdenesCompraConsultaScree
                   ),
                   const Spacer(),
                   Icon(
-                    expanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                    expanded
+                        ? Icons.keyboard_arrow_up
+                        : Icons.keyboard_arrow_down,
                     color: primaryColor,
                   ),
                 ],
@@ -435,6 +648,39 @@ class _OrdenesCompraConsultaScreenState extends State<OrdenesCompraConsultaScree
             ...list.map((it) => _buildOrderTile(primaryColor, it)),
             const SizedBox(height: 6),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEstadoOcBadge(String estadoOc) {
+    final label = estadoOc.trim().toUpperCase();
+    if (label.isEmpty) return const SizedBox.shrink();
+
+    final colors = switch (label) {
+      'EMITIDA' => (const Color(0xFFFEF3C7), const Color(0xFFB45309)),
+      'PRE-APROBADO' => (const Color(0xFFE0F2FE), const Color(0xFF0369A1)),
+      'APROBADA' => (const Color(0xFFD1FAE5), const Color(0xFF065F46)),
+      'ANULADA' => (const Color(0xFFFEE2E2), const Color(0xFF991B1B)),
+      _ => (Colors.grey.shade200, Colors.grey.shade700),
+    };
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: colors.$1,
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Text(
+        label,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        textAlign: TextAlign.center,
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+          color: colors.$2,
+          letterSpacing: 0.2,
         ),
       ),
     );
@@ -458,17 +704,18 @@ class _OrdenesCompraConsultaScreenState extends State<OrdenesCompraConsultaScree
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Fila 1: N° OC + Importe
+            // Fila 1: N° OC + Estado + Importe
             Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Expanded(
                   child: RichText(
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     text: TextSpan(
-                      style: DefaultTextStyle.of(context).style.copyWith(
-                        decoration: TextDecoration.none,
-                      ),
+                      style: DefaultTextStyle.of(
+                        context,
+                      ).style.copyWith(decoration: TextDecoration.none),
                       children: [
                         TextSpan(
                           text: 'N° OC: ',
@@ -480,7 +727,7 @@ class _OrdenesCompraConsultaScreenState extends State<OrdenesCompraConsultaScree
                           ),
                         ),
                         TextSpan(
-                          text: it.ndocum.isEmpty ? '—' : it.ndocum,
+                          text: _ocIdentification(it.ctpdoc, it.ndocum),
                           style: const TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w900,
@@ -492,7 +739,9 @@ class _OrdenesCompraConsultaScreenState extends State<OrdenesCompraConsultaScree
                     ),
                   ),
                 ),
-                const SizedBox(width: 10),
+                Expanded(
+                  child: Center(child: _buildEstadoOcBadge(it.estadoOc)),
+                ),
                 Text(
                   total,
                   style: TextStyle(
@@ -541,7 +790,8 @@ class _OrdenesCompraConsultaScreenState extends State<OrdenesCompraConsultaScree
                 valueStyle: _detailValueStyle(),
               ),
             ],
-            if (it.ordenTrabajo.trim().isNotEmpty || it.formaPago.trim().isNotEmpty) ...[
+            if (it.ordenTrabajo.trim().isNotEmpty ||
+                it.formaPago.trim().isNotEmpty) ...[
               const SizedBox(height: 4),
               LayoutBuilder(
                 builder: (context, c) {
@@ -568,7 +818,8 @@ class _OrdenesCompraConsultaScreenState extends State<OrdenesCompraConsultaScree
                 },
               ),
             ],
-            if (it.usuarioCreacion.trim().isNotEmpty || it.tipoServicio.trim().isNotEmpty) ...[
+            if (it.usuarioCreacion.trim().isNotEmpty ||
+                it.tipoServicio.trim().isNotEmpty) ...[
               const SizedBox(height: 4),
               LayoutBuilder(
                 builder: (context, c) {
@@ -585,7 +836,7 @@ class _OrdenesCompraConsultaScreenState extends State<OrdenesCompraConsultaScree
                       ),
                       DetailField(
                         maxWidth: c.maxWidth,
-                        label: 'Tipo OC',
+                        label: 'Servicio',
                         value: it.tipoServicio,
                         labelStyle: _detailLabelStyle(),
                         valueStyle: _detailValueStyle(),
@@ -599,12 +850,15 @@ class _OrdenesCompraConsultaScreenState extends State<OrdenesCompraConsultaScree
             // Acordeón del detalle
             const SizedBox(height: 8),
             Theme(
-              data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+              data: Theme.of(
+                context,
+              ).copyWith(dividerColor: Colors.transparent),
               child: ExpansionTile(
                 key: PageStorageKey('oc_consulta_detail_${it.key}'),
                 maintainState: true,
                 initiallyExpanded: detailOpen,
-                onExpansionChanged: (v) => setState(() => _detailExpanded[it.key] = v),
+                onExpansionChanged: (v) =>
+                    setState(() => _detailExpanded[it.key] = v),
                 tilePadding: EdgeInsets.zero,
                 childrenPadding: const EdgeInsets.only(top: 6),
                 leading: _bullet(detailOpen, primaryColor),
@@ -614,7 +868,10 @@ class _OrdenesCompraConsultaScreenState extends State<OrdenesCompraConsultaScree
                 ),
                 subtitle: Text(
                   detailOpen ? 'Contraer' : 'Ver ítems',
-                  style: TextStyle(color: Colors.grey.shade700, fontWeight: FontWeight.w600),
+                  style: TextStyle(
+                    color: Colors.grey.shade700,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
                 children: [
                   if (it.items.isEmpty)
@@ -626,8 +883,9 @@ class _OrdenesCompraConsultaScreenState extends State<OrdenesCompraConsultaScree
                       ),
                     )
                   else
-                    ..._sortedDetailItems(it)
-                        .map((d) => _buildDetailRow(primaryColor, d)),
+                    ..._sortedDetailItems(
+                      it,
+                    ).map((d) => _buildDetailRow(primaryColor, d)),
                 ],
               ),
             ),
@@ -668,7 +926,10 @@ class _OrdenesCompraConsultaScreenState extends State<OrdenesCompraConsultaScree
               ),
               if (code.isNotEmpty)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.white.withOpacity(0.7),
                     borderRadius: BorderRadius.circular(999),
@@ -762,7 +1023,6 @@ class _OrdenesCompraConsultaScreenState extends State<OrdenesCompraConsultaScree
       textBaseline: TextBaseline.alphabetic,
     );
   }
-
 }
 
 class DetailField extends StatelessWidget {
@@ -851,5 +1111,3 @@ class UpperCaseTextFormatter extends TextInputFormatter {
     );
   }
 }
-
-

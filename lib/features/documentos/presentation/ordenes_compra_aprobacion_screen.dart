@@ -25,6 +25,7 @@ class _OrdenesCompraAprobacionScreenState
   final Map<String, bool> _detailExpanded = {}; // key: selectionKey
   final Set<String> _detailLoading = {};
   bool _approving = false;
+  bool _isGroupedView = false;
 
   @override
   void initState() {
@@ -52,12 +53,11 @@ class _OrdenesCompraAprobacionScreenState
       });
       setState(() {
         _items = list;
-        _selectedKeys.removeWhere(
-          (k) => !list.any((x) => x.selectionKey == k),
-        );
+        _selectedKeys.removeWhere((k) => !list.any((x) => x.selectionKey == k));
         for (final it in list) {
-          final groupId =
-              it.tipoDocumento.trim().isEmpty ? 'Sin tipo' : it.tipoDocumento.trim();
+          final groupId = it.tipoDocumento.trim().isEmpty
+              ? 'Sin tipo'
+              : it.tipoDocumento.trim();
           _groupExpanded.putIfAbsent(groupId, () => true);
           _detailExpanded.putIfAbsent(it.selectionKey, () => false);
         }
@@ -74,10 +74,28 @@ class _OrdenesCompraAprobacionScreenState
   Map<String, List<OrdenCompraPendienteModel>> get _grouped {
     final map = <String, List<OrdenCompraPendienteModel>>{};
     for (final it in _filteredItems) {
-      final key = it.tipoDocumento.trim().isEmpty ? 'Sin tipo' : it.tipoDocumento.trim();
+      final key = it.tipoDocumento.trim().isEmpty
+          ? 'Sin tipo'
+          : it.tipoDocumento.trim();
       map.putIfAbsent(key, () => []).add(it);
     }
+    for (final list in map.values) {
+      list.sort((a, b) => b.ndocum.compareTo(a.ndocum));
+    }
     return map;
+  }
+
+  List<OrdenCompraPendienteModel> get _linearDisplayItems {
+    final items = List<OrdenCompraPendienteModel>.from(_filteredItems);
+    items.sort((a, b) => b.ndocum.compareTo(a.ndocum));
+    return items;
+  }
+
+  String _ocIdentification(String ctpdoc, String ndocum) {
+    final c = ctpdoc.trim();
+    final n = ndocum.trim();
+    if (c.isEmpty && n.isEmpty) return '—';
+    return '$c-$n';
   }
 
   List<OrdenCompraPendienteModel> get _filteredItems {
@@ -153,7 +171,9 @@ class _OrdenesCompraAprobacionScreenState
   Future<void> _approveSelected() async {
     if (_selectedKeys.isEmpty || _approving) return;
 
-    final selected = _items.where((it) => _selectedKeys.contains(it.selectionKey)).toList();
+    final selected = _items
+        .where((it) => _selectedKeys.contains(it.selectionKey))
+        .toList();
     final byMoneda = <String, int>{};
     for (final it in selected) {
       final key = it.monedaLabel;
@@ -190,7 +210,11 @@ class _OrdenesCompraAprobacionScreenState
     try {
       for (final it in selected) {
         try {
-          await _service.aprobar(ctpdoc: it.ctpdoc, ndocum: it.ndocum, norden: it.norden);
+          await _service.aprobar(
+            ctpdoc: it.ctpdoc,
+            ndocum: it.ndocum,
+            norden: it.norden,
+          );
         } catch (e) {
           final msg = e.toString().replaceAll('Exception: ', '');
           failures.add('${it.ndocum} (${it.tipoDocumento}): $msg');
@@ -200,14 +224,18 @@ class _OrdenesCompraAprobacionScreenState
       if (!mounted) return;
 
       if (failures.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Aprobación completada.')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Aprobación completada.')));
         _selectedKeys.clear();
         await _load();
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Algunas aprobaciones fallaron (${failures.length}).')),
+          SnackBar(
+            content: Text(
+              'Algunas aprobaciones fallaron (${failures.length}).',
+            ),
+          ),
         );
         await _load();
       }
@@ -221,7 +249,11 @@ class _OrdenesCompraAprobacionScreenState
   bool _hasMeaningfulDetails(OrdenCompraPendienteModel it) {
     if (it.items.isEmpty) return false;
     return it.items.any(
-      (d) => d.citems.trim().isNotEmpty || d.ditems.trim().isNotEmpty || d.qsolic != 0 || d.ipruni != 0,
+      (d) =>
+          d.citems.trim().isNotEmpty ||
+          d.ditems.trim().isNotEmpty ||
+          d.qsolic != 0 ||
+          d.ipruni != 0,
     );
   }
 
@@ -238,12 +270,20 @@ class _OrdenesCompraAprobacionScreenState
         limit: 50,
       );
 
-      final match = result.where((x) => x.ctpdoc.trim() == it.ctpdoc.trim() && x.ndocum.trim() == it.ndocum.trim()).toList();
+      final match = result
+          .where(
+            (x) =>
+                x.ctpdoc.trim() == it.ctpdoc.trim() &&
+                x.ndocum.trim() == it.ndocum.trim(),
+          )
+          .toList();
       if (!mounted) return;
 
       if (match.isNotEmpty) {
         setState(() {
-          final idx = _items.indexWhere((x) => x.selectionKey == it.selectionKey);
+          final idx = _items.indexWhere(
+            (x) => x.selectionKey == it.selectionKey,
+          );
           if (idx >= 0) {
             _items[idx] = _items[idx].copyWithItems(match.first.items);
           }
@@ -258,8 +298,10 @@ class _OrdenesCompraAprobacionScreenState
 
   @override
   Widget build(BuildContext context) {
-    final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
-    final primaryColor = args?['primaryColor'] as Color? ?? const Color(0xFF0D47A1);
+    final args =
+        ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+    final primaryColor =
+        args?['primaryColor'] as Color? ?? const Color(0xFF0D47A1);
     final title = args?['title'] as String? ?? 'Aprobación';
 
     final grouped = _grouped;
@@ -293,46 +335,112 @@ class _OrdenesCompraAprobacionScreenState
                       ],
                     )
                   : _error.isNotEmpty
-                      ? ListView(
-                          padding: const EdgeInsets.all(16),
-                          children: [
-                            Text(
-                              'No se pudo cargar las órdenes pendientes.',
-                              style: Theme.of(context).textTheme.titleMedium,
-                            ),
-                            const SizedBox(height: 8),
-                            Text(_error),
-                            const SizedBox(height: 16),
-                            FilledButton(
-                              onPressed: _load,
-                              child: const Text('Reintentar'),
-                            ),
-                          ],
-                        )
-                      : groupKeys.isEmpty
-                          ? ListView(
-                              padding: const EdgeInsets.all(16),
-                              children: const [
-                                SizedBox(height: 60),
-                                Icon(Icons.inbox_outlined, size: 48, color: Colors.grey),
-                                SizedBox(height: 12),
-                                Center(child: Text('No hay órdenes pendientes por aprobar.')),
-                              ],
-                            )
-                          : ListView.builder(
-                              padding: const EdgeInsets.only(bottom: 96),
-                              itemCount: groupKeys.length,
-                              itemBuilder: (context, i) {
-                                final k = groupKeys[i];
-                                final list = grouped[k]!;
-                                return _buildGroup(k, k, list, primaryColor);
-                              },
-                            ),
+                  ? ListView(
+                      padding: const EdgeInsets.all(16),
+                      children: [
+                        Text(
+                          'No se pudo cargar las órdenes pendientes.',
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                        const SizedBox(height: 8),
+                        Text(_error),
+                        const SizedBox(height: 16),
+                        FilledButton(
+                          onPressed: _load,
+                          child: const Text('Reintentar'),
+                        ),
+                      ],
+                    )
+                  : groupKeys.isEmpty
+                  ? ListView(
+                      padding: const EdgeInsets.all(16),
+                      children: const [
+                        SizedBox(height: 60),
+                        Icon(
+                          Icons.inbox_outlined,
+                          size: 48,
+                          color: Colors.grey,
+                        ),
+                        SizedBox(height: 12),
+                        Center(
+                          child: Text('No hay órdenes pendientes por aprobar.'),
+                        ),
+                      ],
+                    )
+                  : ListView.builder(
+                      padding: const EdgeInsets.only(bottom: 96),
+                      itemCount: _isGroupedView
+                          ? groupKeys.length
+                          : _linearDisplayItems.length,
+                      itemBuilder: (context, i) {
+                        if (_isGroupedView) {
+                          final k = groupKeys[i];
+                          final list = grouped[k]!;
+                          return _buildGroup(k, k, list, primaryColor);
+                        }
+                        return _buildItemTile(_linearDisplayItems[i], primaryColor);
+                      },
+                    ),
             ),
           ),
         ],
       ),
       bottomNavigationBar: _buildBottomBar(primaryColor),
+    );
+  }
+
+  Widget _buildViewModeButtons(Color primaryColor) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _buildViewModeButton(
+          primaryColor: primaryColor,
+          icon: Icons.view_list,
+          tooltip: 'Vista lista',
+          selected: !_isGroupedView,
+          onTap: () {
+            if (_isGroupedView) setState(() => _isGroupedView = false);
+          },
+        ),
+        const SizedBox(width: 6),
+        _buildViewModeButton(
+          primaryColor: primaryColor,
+          icon: Icons.layers_outlined,
+          tooltip: 'Vista agrupada',
+          selected: _isGroupedView,
+          onTap: () {
+            if (!_isGroupedView) setState(() => _isGroupedView = true);
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildViewModeButton({
+    required Color primaryColor,
+    required IconData icon,
+    required String tooltip,
+    required bool selected,
+    required VoidCallback onTap,
+  }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Tooltip(
+      message: tooltip,
+      child: InkWell(
+        customBorder: const CircleBorder(),
+        onTap: onTap,
+        child: CircleAvatar(
+          radius: 20,
+          backgroundColor: selected
+              ? primaryColor.withOpacity(0.18)
+              : (isDark ? Colors.grey.shade800 : Colors.grey.shade200),
+          child: Icon(
+            icon,
+            size: 20,
+            color: selected ? primaryColor : Colors.grey.shade500,
+          ),
+        ),
+      ),
     );
   }
 
@@ -367,7 +475,7 @@ class _OrdenesCompraAprobacionScreenState
                 ],
               ),
             ),
-            if (selected > 0)
+            if (selected > 0) ...[
               TextButton.icon(
                 onPressed: _approving
                     ? null
@@ -375,6 +483,9 @@ class _OrdenesCompraAprobacionScreenState
                 icon: const Icon(Icons.clear),
                 label: const Text('Limpiar'),
               ),
+              const SizedBox(width: 4),
+            ],
+            _buildViewModeButtons(primaryColor),
           ],
         ),
       ),
@@ -465,7 +576,9 @@ class _OrdenesCompraAprobacionScreenState
                     child: Transform.scale(
                       scale: 0.9,
                       child: Checkbox(
-                        value: allSelected ? true : (someSelected ? null : false),
+                        value: allSelected
+                            ? true
+                            : (someSelected ? null : false),
                         tristate: true,
                         visualDensity: VisualDensity.compact,
                         materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -543,16 +656,17 @@ class _OrdenesCompraAprobacionScreenState
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           text: TextSpan(
-                            style: DefaultTextStyle.of(context).style.copyWith(
-                              decoration: TextDecoration.none,
-                            ),
+                            style: DefaultTextStyle.of(
+                              context,
+                            ).style.copyWith(decoration: TextDecoration.none),
                             children: [
                               TextSpan(
                                 text: 'N° OC: ',
                                 style: TextStyle(
                                   fontSize: 12,
                                   fontWeight: FontWeight.w900,
-                                  color: Theme.of(context).brightness ==
+                                  color:
+                                      Theme.of(context).brightness ==
                                           Brightness.dark
                                       ? Colors.white70
                                       : Colors.black54,
@@ -560,7 +674,7 @@ class _OrdenesCompraAprobacionScreenState
                                 ),
                               ),
                               TextSpan(
-                                text: it.ndocum.isEmpty ? '—' : it.ndocum,
+                                text: _ocIdentification(it.ctpdoc, it.ndocum),
                                 style: const TextStyle(
                                   fontSize: 13,
                                   fontWeight: FontWeight.w900,
@@ -581,7 +695,9 @@ class _OrdenesCompraAprobacionScreenState
                           color: primaryColor,
                         ),
                       ),
-                      const SizedBox(width: 28), // espacio para checkbox flotante
+                      const SizedBox(
+                        width: 28,
+                      ), // espacio para checkbox flotante
                     ],
                   ),
                   const SizedBox(height: 6),
@@ -622,7 +738,8 @@ class _OrdenesCompraAprobacionScreenState
                       valueStyle: _detailValueStyle(),
                     ),
                   ],
-                  if (it.ordenTrabajo.trim().isNotEmpty || it.formaPago.trim().isNotEmpty) ...[
+                  if (it.ordenTrabajo.trim().isNotEmpty ||
+                      it.formaPago.trim().isNotEmpty) ...[
                     const SizedBox(height: 4),
                     LayoutBuilder(
                       builder: (context, c) {
@@ -649,7 +766,8 @@ class _OrdenesCompraAprobacionScreenState
                       },
                     ),
                   ],
-                  if (it.usuarioCreacion.trim().isNotEmpty || it.tipoServicio.trim().isNotEmpty) ...[
+                  if (it.usuarioCreacion.trim().isNotEmpty ||
+                      it.tipoServicio.trim().isNotEmpty) ...[
                     const SizedBox(height: 4),
                     LayoutBuilder(
                       builder: (context, c) {
@@ -666,7 +784,7 @@ class _OrdenesCompraAprobacionScreenState
                             ),
                             DetailField(
                               maxWidth: c.maxWidth,
-                              label: 'Tipo OC',
+                              label: 'Servicio',
                               value: it.tipoServicio,
                               labelStyle: _detailLabelStyle(),
                               valueStyle: _detailValueStyle(),
@@ -680,9 +798,9 @@ class _OrdenesCompraAprobacionScreenState
                   // Acordeón del detalle (contador estable desde el inicio)
                   const SizedBox(height: 8),
                   Theme(
-                    data: Theme.of(context).copyWith(
-                      dividerColor: Colors.transparent,
-                    ),
+                    data: Theme.of(
+                      context,
+                    ).copyWith(dividerColor: Colors.transparent),
                     child: ExpansionTile(
                       key: PageStorageKey('oc_aprob_detail_${it.selectionKey}'),
                       maintainState: true,
@@ -692,7 +810,8 @@ class _OrdenesCompraAprobacionScreenState
                           _detailExpanded[it.selectionKey] = v;
                         });
                         // Solo fallback si realmente no vino detalle utilizable
-                        if (v && (it.items.isEmpty || !_hasMeaningfulDetails(it))) {
+                        if (v &&
+                            (it.items.isEmpty || !_hasMeaningfulDetails(it))) {
                           await _ensureDetailLoaded(it);
                         }
                       },
@@ -725,9 +844,9 @@ class _OrdenesCompraAprobacionScreenState
                             ),
                           )
                         else
-                          ..._sortedDetailItems(it).map(
-                            (d) => _buildDetailRow(primaryColor, d),
-                          ),
+                          ..._sortedDetailItems(
+                            it,
+                          ).map((d) => _buildDetailRow(primaryColor, d)),
                       ],
                     ),
                   ),
@@ -792,8 +911,10 @@ class _OrdenesCompraAprobacionScreenState
               ),
               if (code.isNotEmpty)
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.white.withOpacity(0.7),
                     borderRadius: BorderRadius.circular(999),
@@ -913,8 +1034,13 @@ class _OrdenesCompraAprobacionScreenState
                       style: const TextStyle(fontWeight: FontWeight.w700),
                     ),
                     Text(
-                      _selectedCount == 0 ? '—' : 'Total: ${_selectedTotal.toStringAsFixed(2)}',
-                      style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+                      _selectedCount == 0
+                          ? '—'
+                          : 'Total: ${_selectedTotal.toStringAsFixed(2)}',
+                      style: TextStyle(
+                        color: Colors.grey.shade600,
+                        fontSize: 12,
+                      ),
                     ),
                   ],
                 ),
@@ -1041,4 +1167,3 @@ class _CountBadge extends StatelessWidget {
     );
   }
 }
-
