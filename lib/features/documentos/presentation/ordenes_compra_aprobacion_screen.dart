@@ -80,14 +80,14 @@ class _OrdenesCompraAprobacionScreenState
       map.putIfAbsent(key, () => []).add(it);
     }
     for (final list in map.values) {
-      list.sort((a, b) => b.ndocum.compareTo(a.ndocum));
+      list.sort((a, b) => a.ndocum.compareTo(b.ndocum));
     }
     return map;
   }
 
   List<OrdenCompraPendienteModel> get _linearDisplayItems {
     final items = List<OrdenCompraPendienteModel>.from(_filteredItems);
-    items.sort((a, b) => b.ndocum.compareTo(a.ndocum));
+    items.sort((a, b) => a.ndocum.compareTo(b.ndocum));
     return items;
   }
 
@@ -378,7 +378,10 @@ class _OrdenesCompraAprobacionScreenState
                           final list = grouped[k]!;
                           return _buildGroup(k, k, list, primaryColor);
                         }
-                        return _buildItemTile(_linearDisplayItems[i], primaryColor);
+                        return _buildItemTile(
+                          _linearDisplayItems[i],
+                          primaryColor,
+                        );
                       },
                     ),
             ),

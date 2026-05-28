@@ -78,7 +78,7 @@ class _OrdenesCompraConsultaScreenState
         final gb = b.groupId.toLowerCase();
         final c = ga.compareTo(gb);
         if (c != 0) return c;
-        return b.ndocum.compareTo(a.ndocum);
+        return a.ndocum.compareTo(b.ndocum);
       });
 
       setState(() {
@@ -137,14 +137,14 @@ class _OrdenesCompraConsultaScreenState
       map.putIfAbsent(it.groupId, () => []).add(it);
     }
     for (final list in map.values) {
-      list.sort((a, b) => b.ndocum.compareTo(a.ndocum));
+      list.sort((a, b) => a.ndocum.compareTo(b.ndocum));
     }
     return map;
   }
 
   List<OrdenCompraConsultaModel> get _linearDisplayItems {
     final items = List<OrdenCompraConsultaModel>.from(_filtered);
-    items.sort((a, b) => b.ndocum.compareTo(a.ndocum));
+    items.sort((a, b) => a.ndocum.compareTo(b.ndocum));
     return items;
   }
 
